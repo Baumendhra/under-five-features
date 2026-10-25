@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      students: {
+        Row: {
+          apaar_id: string | null
+          category: string | null
+          contact: string | null
+          created_at: string
+          dob: string | null
+          id: string
+          intake_type: string | null
+          name: string
+          programme_code: string | null
+          student_id: string | null
+          user_id: string
+        }
+        Insert: {
+          apaar_id?: string | null
+          category?: string | null
+          contact?: string | null
+          created_at?: string
+          dob?: string | null
+          id?: string
+          intake_type?: string | null
+          name: string
+          programme_code?: string | null
+          student_id?: string | null
+          user_id: string
+        }
+        Update: {
+          apaar_id?: string | null
+          category?: string | null
+          contact?: string | null
+          created_at?: string
+          dob?: string | null
+          id?: string
+          intake_type?: string | null
+          name?: string
+          programme_code?: string | null
+          student_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
