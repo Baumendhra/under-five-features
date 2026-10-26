@@ -63,9 +63,9 @@ export function normalizeDob(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const value = raw.trim();
   let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
-  if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+  if (m) return `${m[1]}-${m[2]!.padStart(2, "0")}-${m[3]!.padStart(2, "0")}`;
   m = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(value);
-  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  if (m) return `${m[3]}-${m[2]!.padStart(2, "0")}-${m[1]!.padStart(2, "0")}`;
   return null;
 }
 
@@ -156,7 +156,7 @@ export function parseStudentsCsv(text: string): CsvParseResult {
     const mapped = HEADER_MAP[header];
     if (mapped && ![...indexes.values()].includes(mapped)) indexes.set(i, mapped);
   });
-  if (!indexes.has(1 /* name */)) {
+  if (![...indexes.values()].includes("name" /* required column */)) {
     return { ok: false, error: "Could not find a Name column in the header row." };
   }
 
