@@ -156,7 +156,7 @@ export function parseStudentsCsv(text: string): CsvParseResult {
     const mapped = HEADER_MAP[header];
     if (mapped && ![...indexes.values()].includes(mapped)) indexes.set(i, mapped);
   });
-  if (!indexes.has(1 /* name */)) {
+  if (![...indexes.values()].includes("name" /* required column */)) {
     return { ok: false, error: "Could not find a Name column in the header row." };
   }
 
