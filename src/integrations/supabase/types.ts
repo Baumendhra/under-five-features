@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.18"
   }
@@ -17,42 +15,322 @@ export type Database = {
       students: {
         Row: {
           apaar_id: string | null
+          apaar_verify_status: string | null
+          apaar_verified_at: string | null
           category: string | null
+          consent_recorded: boolean | null
           contact: string | null
           created_at: string
+          current_status: string | null
           dob: string | null
+          gender: string | null
           id: string
+          institution_id: string | null
           intake_type: string | null
           name: string
           programme_code: string | null
           student_id: string | null
           user_id: string
+          admission_year: number | null
         }
         Insert: {
           apaar_id?: string | null
+          apaar_verify_status?: string | null
+          apaar_verified_at?: string | null
           category?: string | null
+          consent_recorded?: boolean | null
           contact?: string | null
           created_at?: string
+          current_status?: string | null
           dob?: string | null
+          gender?: string | null
           id?: string
+          institution_id?: string | null
           intake_type?: string | null
           name: string
           programme_code?: string | null
           student_id?: string | null
           user_id: string
+          admission_year?: number | null
         }
         Update: {
           apaar_id?: string | null
+          apaar_verify_status?: string | null
+          apaar_verified_at?: string | null
           category?: string | null
+          consent_recorded?: boolean | null
           contact?: string | null
           created_at?: string
+          current_status?: string | null
           dob?: string | null
+          gender?: string | null
           id?: string
+          institution_id?: string | null
           intake_type?: string | null
           name?: string
           programme_code?: string | null
           student_id?: string | null
           user_id?: string
+          admission_year?: number | null
+        }
+        Relationships: []
+      }
+      institutions: {
+        Row: {
+          id: string
+          name: string
+          aicte_id: string | null
+          region: string | null
+          affiliation: string | null
+          address: string | null
+          contact_email: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          aicte_id?: string | null
+          region?: string | null
+          affiliation?: string | null
+          address?: string | null
+          contact_email?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          aicte_id?: string | null
+          region?: string | null
+          affiliation?: string | null
+          address?: string | null
+          contact_email?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      programmes: {
+        Row: {
+          id: string
+          institution_id: string
+          course_code: string
+          course_name: string | null
+          year: number
+          intake_approved: number
+          intake_nri: number
+          intake_supernumerary: number
+          other_details: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          institution_id: string
+          course_code: string
+          course_name?: string | null
+          year?: number
+          intake_approved?: number
+          intake_nri?: number
+          intake_supernumerary?: number
+          other_details?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          institution_id?: string
+          course_code?: string
+          course_name?: string | null
+          year?: number
+          intake_approved?: number
+          intake_nri?: number
+          intake_supernumerary?: number
+          other_details?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programmes_institution_id_fkey"
+            columns: ["institution_id"]
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      enrollments: {
+        Row: {
+          id: string
+          student_id: string
+          programme_id: string
+          academic_year_id: string
+          semester: number | null
+          admission_type: string
+          status: string
+          enrolled_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          programme_id: string
+          academic_year_id: string
+          semester?: number | null
+          admission_type?: string
+          status?: string
+          enrolled_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          programme_id?: string
+          academic_year_id?: string
+          semester?: number | null
+          admission_type?: string
+          status?: string
+          enrolled_at?: string
+        }
+        Relationships: []
+      }
+      duplicate_cases: {
+        Row: {
+          id: string
+          student_ids: string[]
+          reason: string
+          status: string
+          reviewed_by: string | null
+          resolution: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_ids: string[]
+          reason: string
+          status?: string
+          reviewed_by?: string | null
+          resolution?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_ids?: string[]
+          reason?: string
+          status?: string
+          reviewed_by?: string | null
+          resolution?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          action: string
+          entity_type: string
+          entity_id: string | null
+          details: Json | null
+          ip_address: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action: string
+          entity_type: string
+          entity_id?: string | null
+          details?: Json | null
+          ip_address?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action?: string
+          entity_type?: string
+          entity_id?: string | null
+          details?: Json | null
+          ip_address?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string | null
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message?: string | null
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          message?: string | null
+          read?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          id: string
+          full_name: string | null
+          role: string
+          institution_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id: string
+          full_name?: string | null
+          role?: string
+          institution_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string | null
+          role?: string
+          institution_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      academic_years: {
+        Row: {
+          id: string
+          label: string
+          start_date: string
+          end_date: string
+          reporting_deadline: string | null
+          is_active: boolean
+        }
+        Insert: {
+          id?: string
+          label: string
+          start_date: string
+          end_date: string
+          reporting_deadline?: string | null
+          is_active?: boolean
+        }
+        Update: {
+          id?: string
+          label?: string
+          start_date?: string
+          end_date?: string
+          reporting_deadline?: string | null
+          is_active?: boolean
         }
         Relationships: []
       }
@@ -170,23 +448,6 @@ export type Enums<
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {

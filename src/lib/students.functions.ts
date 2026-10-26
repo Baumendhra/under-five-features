@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { queryOptions } from "@tanstack/react-query";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// Re-export for convenience
+export { getDashboardStats, dashboardStatsQueryOptions } from "@/lib/edutrace.functions";
+
+
 export type StudentRecord = {
   id: string;
   student_id: string | null;

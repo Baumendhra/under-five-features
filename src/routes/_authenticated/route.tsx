@@ -24,6 +24,10 @@ const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/students", label: "Students" },
   { to: "/import", label: "Import" },
+  { to: "/institutions", label: "Institutions" },
+  { to: "/programmes", label: "Programmes" },
+  { to: "/duplicates", label: "Duplicates" },
+  { to: "/audit", label: "Audit" },
 ] as const;
 
 function AuthenticatedLayout() {
