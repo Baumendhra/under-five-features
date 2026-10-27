@@ -26,19 +26,21 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
-// Navigation items and the minimum role required to see them.
+// Navigation items per role per the RBAC specification.
 // "all" means every authenticated role.
 type NavItem = { to: string; label: string; roles: Role[] | "all" };
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard",    label: "Dashboard",    roles: "all" },
-  { to: "/students",     label: "Students",     roles: "all" },
+  { to: "/students",     label: "Students",     roles: ["aicte_admin", "institution_admin", "officer"] },
+  { to: "/profile",      label: "My Profile",   roles: ["student"] },
   { to: "/import",       label: "Import",       roles: ["aicte_admin", "institution_admin", "officer"] },
   { to: "/institutions", label: "Institutions", roles: ["aicte_admin"] },
   { to: "/programmes",   label: "Programmes",   roles: ["aicte_admin", "institution_admin"] },
   { to: "/duplicates",   label: "Duplicates",   roles: ["aicte_admin", "institution_admin", "officer"] },
+  { to: "/corrections",  label: "Corrections",  roles: ["aicte_admin", "institution_admin", "officer"] },
   { to: "/audit",        label: "Audit",        roles: ["aicte_admin", "institution_admin", "officer"] },
-  { to: "/demo/dashboard", label: "🧪 Demo", roles: "all" },
+  { to: "/demo/dashboard", label: "🧪 Demo",   roles: "all" },
 ];
 
 function NotificationBell() {

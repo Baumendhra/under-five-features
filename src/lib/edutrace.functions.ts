@@ -2,6 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { queryOptions } from "@tanstack/react-query";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { verifyApaarId } from "@/lib/apaar-adapter";
+import {
+  requireAicteAdmin,
+  requireStaff,
+  requireExportPermission,
+  requireApaarVerifyPermission,
+  requireDuplicateResolvePermission,
+  requireAuditAccess,
+  applyStudentScope,
+} from "@/lib/rbac";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -82,6 +91,7 @@ export type UserProfile = {
 export const listInstitutions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    // All authenticated users can list institutions (needed for forms etc.)
     const { data, error } = await context.supabase
       .from("institutions")
       .select("*")
@@ -99,19 +109,44 @@ export const createInstitution = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: Omit<Institution, "id" | "created_at">) => input)
   .handler(async ({ data, context }) => {
+    // Only AICTE admin can create institutions
+    requireAicteAdmin(context.role);
+
     const { data: inst, error } = await context.supabase
       .from("institutions")
       .insert(data)
       .select()
       .single();
     if (error) throw new Error(error.message);
-    // Log audit
     await context.supabase.from("audit_logs").insert({
       user_id: context.userId,
       action: "insert",
       entity_type: "institution",
       entity_id: inst.id,
       details: { name: data.name },
+    });
+    return inst as Institution;
+  });
+
+export const updateInstitution = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: Partial<Institution> & { id: string }) => input)
+  .handler(async ({ data, context }) => {
+    requireAicteAdmin(context.role);
+    const { id, ...rest } = data;
+    const { data: inst, error } = await context.supabase
+      .from("institutions")
+      .update(rest)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    await context.supabase.from("audit_logs").insert({
+      user_id: context.userId,
+      action: "update",
+      entity_type: "institution",
+      entity_id: id,
+      details: rest,
     });
     return inst as Institution;
   });
@@ -138,6 +173,14 @@ export const createProgramme = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: Omit<Programme, "id" | "created_at">) => input)
   .handler(async ({ data, context }) => {
+    // aicte_admin or institution_admin can create programmes
+    if (context.role !== "aicte_admin" && context.role !== "institution_admin") {
+      throw new Error("Forbidden: only institution admins may create programmes.");
+    }
+    // Institution admin can only create programmes for their own institution
+    if (context.role === "institution_admin" && context.institutionId && data.institution_id !== context.institutionId) {
+      throw new Error("Forbidden: you may only create programmes for your institution.");
+    }
     const { data: prog, error } = await context.supabase
       .from("programmes")
       .insert(data)
@@ -159,17 +202,12 @@ export const createProgramme = createServerFn({ method: "POST" })
 export const getDashboardStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<DashboardStats> => {
-    // aicte_admin sees all students; institution/officer sees own institution only
     let query = context.supabase
       .from("students")
       .select("apaar_id, apaar_verify_status, category, programme_code, intake_type, created_at");
 
-    if (context.role !== "aicte_admin" && context.institutionId) {
-      query = query.eq("institution_id", context.institutionId);
-    } else if (context.role !== "aicte_admin") {
-      // No institution_id set: fall back to scoping by user_id
-      query = query.eq("user_id", context.userId);
-    }
+    // Apply role-scoped data filter
+    query = applyStudentScope(query as any, context.role, context.userId, context.institutionId) as any;
 
     const { data: students, error } = await query;
     if (error) throw new Error(error.message);
@@ -199,11 +237,13 @@ export const getDashboardStats = createServerFn({ method: "GET" })
       if (dateKey) byDate[dateKey] = (byDate[dateKey] ?? 0) + 1;
     }
 
-    // Get duplicate cases
-    const { count: duplicates } = await context.supabase
+    // Duplicate cases – scoped for institution users
+    let dupQuery = context.supabase
       .from("duplicate_cases")
       .select("*", { count: "exact", head: true })
       .eq("status", "open");
+
+    const { count: duplicates } = await dupQuery;
 
     const recent_uploads = Object.entries(byDate)
       .sort(([a], [b]) => b.localeCompare(a))
@@ -236,29 +276,38 @@ export const verifyStudentApaar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { studentId: string; apaarId: string }) => input)
   .handler(async ({ data, context }) => {
+    // Only staff can verify APAAR
+    requireApaarVerifyPermission(context.role);
+
     const result = await verifyApaarId(data.apaarId);
+    const newStatus =
+      result.status === "verified" ? "verified" :
+      result.status === "not_found" ? "not_found" : "failed";
 
-    // Update student's verification status
-    const newStatus = result.status === "verified" ? "verified"
-      : result.status === "not_found" ? "not_found"
-      : "failed";
-
-    await context.supabase
+    // Scope update: staff scoped by institution, student scoped by user_id
+    let updateQuery = context.supabase
       .from("students")
       .update({
         apaar_verify_status: newStatus,
         apaar_verified_at: newStatus === "verified" ? new Date().toISOString() : null,
       })
-      .eq("id", data.studentId)
-      .eq("user_id", context.userId);
+      .eq("id", data.studentId);
 
-    // Audit log
+    // Institution admins/officers can only update students in their institution
+    if (context.role !== "aicte_admin" && context.institutionId) {
+      updateQuery = (updateQuery as any).eq("institution_id", context.institutionId);
+    } else if (context.role !== "aicte_admin") {
+      updateQuery = (updateQuery as any).eq("user_id", context.userId);
+    }
+
+    await updateQuery;
+
     await context.supabase.from("audit_logs").insert({
       user_id: context.userId,
       action: "verify",
       entity_type: "student",
       entity_id: data.studentId,
-      details: { apaar_id: data.apaarId, result: result.status },
+      details: { apaar_id: data.apaarId, result: result.status, role: context.role },
     });
 
     return result;
@@ -269,6 +318,9 @@ export const verifyStudentApaar = createServerFn({ method: "POST" })
 export const listDuplicateCases = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    // Students cannot see duplicate cases
+    requireAuditAccess(context.role);
+
     const { data, error } = await context.supabase
       .from("duplicate_cases")
       .select("*")
@@ -284,8 +336,13 @@ export const duplicateCasesQueryOptions = queryOptions({
 
 export const resolveDuplicateCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { caseId: string; status: string; resolution: string }) => input)
+  .validator(
+    (input: { caseId: string; status: string; resolution: string; finalise?: boolean }) => input,
+  )
   .handler(async ({ data, context }) => {
+    const isFinalise = data.status === "resolved" || data.status === "dismissed";
+    requireDuplicateResolvePermission(context.role, isFinalise);
+
     const { error } = await context.supabase
       .from("duplicate_cases")
       .update({
@@ -302,7 +359,12 @@ export const resolveDuplicateCase = createServerFn({ method: "POST" })
       action: "update",
       entity_type: "duplicate_case",
       entity_id: data.caseId,
-      details: { status: data.status, resolution: data.resolution },
+      details: {
+        status: data.status,
+        resolution: data.resolution,
+        role: context.role,
+        finalised: isFinalise,
+      },
     });
 
     return { ok: true };
@@ -313,11 +375,21 @@ export const resolveDuplicateCase = createServerFn({ method: "POST" })
 export const listAuditLogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    // Students cannot view audit logs
+    requireAuditAccess(context.role);
+
+    let query = context.supabase
       .from("audit_logs")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(200);
+
+    // Institution-scoped users only see their institution's logs
+    if (context.role !== "aicte_admin") {
+      query = (query as any).eq("user_id", context.userId);
+    }
+
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []) as AuditEntry[];
   });
@@ -356,7 +428,7 @@ export const markNotificationRead = createServerFn({ method: "POST" })
       .from("notifications")
       .update({ read: true })
       .eq("id", data.notificationId)
-      .eq("user_id", context.userId);
+      .eq("user_id", context.userId); // enforce ownership
     return { ok: true };
   });
 
@@ -381,7 +453,6 @@ export const userProfileQueryOptions = queryOptions({
 
 // ── Export ────────────────────────────────────────────────────────────────
 
-/** Masks all but first 4 and last 2 digits of APAAR — e.g. 123456789012 → 1234••••9012 */
 function maskApaar(raw: string | null): string {
   if (!raw || raw.length < 6) return raw ?? "";
   const cleaned = raw.replace(/[\s-]/g, "");
@@ -392,60 +463,67 @@ export const exportStudentsCsv = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { filterStatus?: string } | undefined) => input ?? {})
   .handler(async ({ data: filter, context }) => {
-    // Scope query by institution for non-admin roles
+    // Students may not export
+    requireExportPermission(context.role);
+
     let query = context.supabase
       .from("students")
-      .select("student_id, apaar_id, name, dob, gender, category, programme_code, intake_type, contact, apaar_verify_status, current_status, created_at")
+      .select(
+        "student_id, apaar_id, name, dob, gender, category, programme_code, intake_type, contact, apaar_verify_status, current_status, created_at",
+      )
       .order("name");
 
-    if (context.role !== "aicte_admin" && context.institutionId) {
-      query = query.eq("institution_id", context.institutionId);
-    } else if (context.role !== "aicte_admin") {
-      query = query.eq("user_id", context.userId);
-    }
+    query = applyStudentScope(query as any, context.role, context.userId, context.institutionId) as any;
 
-    // Apply optional status filter
     if (filter?.filterStatus && filter.filterStatus !== "all") {
-      query = query.eq("apaar_verify_status", filter.filterStatus);
+      query = (query as any).eq("apaar_verify_status", filter.filterStatus);
     }
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
 
     const rows = data ?? [];
-    const headers = ["StudentID", "APAAR_ID_masked", "Name", "DOB", "Gender", "Category", "ProgrammeCode", "IntakeType", "Contact", "VerificationStatus", "CurrentStatus", "ImportedAt"];
-    const csvRows = rows.map((r) => [
-      r.student_id ?? "",
-      maskApaar(r.apaar_id),          // ← masked, never raw APAAR in export
-      r.name,
-      r.dob ?? "",
-      (r as Record<string, unknown>).gender as string ?? "",
-      r.category ?? "",
-      r.programme_code ?? "",
-      r.intake_type ?? "",
-      r.contact ?? "",
-      (r as Record<string, unknown>).apaar_verify_status as string ?? "pending",
-      (r as Record<string, unknown>).current_status as string ?? "active",
-      r.created_at?.slice(0, 10) ?? "",
-    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    const headers = [
+      "StudentID", "APAAR_ID_masked", "Name", "DOB", "Gender",
+      "Category", "ProgrammeCode", "IntakeType", "Contact",
+      "VerificationStatus", "CurrentStatus", "ImportedAt",
+    ];
+    const csvRows = rows.map((r) =>
+      [
+        r.student_id ?? "",
+        maskApaar(r.apaar_id),
+        r.name,
+        r.dob ?? "",
+        (r as any).gender ?? "",
+        r.category ?? "",
+        r.programme_code ?? "",
+        r.intake_type ?? "",
+        r.contact ?? "",
+        (r as any).apaar_verify_status ?? "pending",
+        (r as any).current_status ?? "active",
+        r.created_at?.slice(0, 10) ?? "",
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(","),
+    );
 
-    // Audit: record that an export happened
-    await context.supabase.from("audit_logs").insert({
-      user_id: context.userId,
-      action: "export",
-      entity_type: "student",
-      entity_id: null,
-      details: {
-        row_count: rows.length,
-        filter_status: filter?.filterStatus ?? "all",
-        institution_id: context.institutionId,
-      },
-    }).throwOnError();
+    await context.supabase
+      .from("audit_logs")
+      .insert({
+        user_id: context.userId,
+        action: "export",
+        entity_type: "student",
+        entity_id: null,
+        details: {
+          row_count: rows.length,
+          filter_status: filter?.filterStatus ?? "all",
+          institution_id: context.institutionId,
+          role: context.role,
+        },
+      })
+      .throwOnError();
 
     const filename = `edutrace-export-${new Date().toISOString().slice(0, 10)}${filter?.filterStatus && filter.filterStatus !== "all" ? `-${filter.filterStatus}` : ""}.csv`;
 
-    return {
-      csv: [headers.join(","), ...csvRows].join("\n"),
-      filename,
-    };
+    return { csv: [headers.join(","), ...csvRows].join("\n"), filename };
   });

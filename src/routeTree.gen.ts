@@ -14,19 +14,24 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DemoRouteRouteImport } from './routes/demo.route'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
+import { Route as AuthenticatedCorrectionsRouteImport } from './routes/_authenticated/corrections'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDuplicatesRouteImport } from './routes/_authenticated/duplicates'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
 import { Route as AuthenticatedInstitutionsRouteImport } from './routes/_authenticated/institutions'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedProgrammesRouteImport } from './routes/_authenticated/programmes'
 import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated/students'
 import { Route as DemoIndexRouteImport } from './routes/demo.index'
+import { Route as DemoApprovalflowRouteImport } from './routes/demo.approvalflow'
 import { Route as DemoAuditRouteImport } from './routes/demo.audit'
 import { Route as DemoDashboardRouteImport } from './routes/demo.dashboard'
 import { Route as DemoDuplicatesRouteImport } from './routes/demo.duplicates'
 import { Route as DemoImportRouteImport } from './routes/demo.import'
 import { Route as DemoInstitutionsRouteImport } from './routes/demo.institutions'
 import { Route as DemoStudentsRouteImport } from './routes/demo.students'
+import { Route as DemoApprovalflowApplicationsRouteImport } from './routes/demo.approvalflow.applications'
+import { Route as DemoApprovalflowScrutinyRouteImport } from './routes/demo.approvalflow.scrutiny'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +57,12 @@ const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCorrectionsRoute =
+  AuthenticatedCorrectionsRouteImport.update({
+    id: '/corrections',
+    path: '/corrections',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -73,6 +84,11 @@ const AuthenticatedInstitutionsRoute =
     path: '/institutions',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProgrammesRoute = AuthenticatedProgrammesRouteImport.update({
   id: '/programmes',
   path: '/programmes',
@@ -86,6 +102,11 @@ const AuthenticatedStudentsRoute = AuthenticatedStudentsRouteImport.update({
 const DemoIndexRoute = DemoIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
+const DemoApprovalflowRoute = DemoApprovalflowRouteImport.update({
+  id: '/approvalflow',
+  path: '/approvalflow',
   getParentRoute: () => DemoRouteRoute,
 } as any)
 const DemoAuditRoute = DemoAuditRouteImport.update({
@@ -118,18 +139,33 @@ const DemoStudentsRoute = DemoStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => DemoRouteRoute,
 } as any)
+const DemoApprovalflowApplicationsRoute =
+  DemoApprovalflowApplicationsRouteImport.update({
+    id: '/applications',
+    path: '/applications',
+    getParentRoute: () => DemoApprovalflowRoute,
+  } as any)
+const DemoApprovalflowScrutinyRoute =
+  DemoApprovalflowScrutinyRouteImport.update({
+    id: '/scrutiny',
+    path: '/scrutiny',
+    getParentRoute: () => DemoApprovalflowRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/demo': typeof DemoRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/audit': typeof AuthenticatedAuditRoute
+  '/corrections': typeof AuthenticatedCorrectionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/duplicates': typeof AuthenticatedDuplicatesRoute
   '/import': typeof AuthenticatedImportRoute
   '/institutions': typeof AuthenticatedInstitutionsRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/programmes': typeof AuthenticatedProgrammesRoute
   '/students': typeof AuthenticatedStudentsRoute
+  '/demo/approvalflow': typeof DemoApprovalflowRouteWithChildren
   '/demo/audit': typeof DemoAuditRoute
   '/demo/dashboard': typeof DemoDashboardRoute
   '/demo/duplicates': typeof DemoDuplicatesRoute
@@ -137,17 +173,22 @@ export interface FileRoutesByFullPath {
   '/demo/institutions': typeof DemoInstitutionsRoute
   '/demo/students': typeof DemoStudentsRoute
   '/demo/': typeof DemoIndexRoute
+  '/demo/approvalflow/applications': typeof DemoApprovalflowApplicationsRoute
+  '/demo/approvalflow/scrutiny': typeof DemoApprovalflowScrutinyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/audit': typeof AuthenticatedAuditRoute
+  '/corrections': typeof AuthenticatedCorrectionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/duplicates': typeof AuthenticatedDuplicatesRoute
   '/import': typeof AuthenticatedImportRoute
   '/institutions': typeof AuthenticatedInstitutionsRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/programmes': typeof AuthenticatedProgrammesRoute
   '/students': typeof AuthenticatedStudentsRoute
+  '/demo/approvalflow': typeof DemoApprovalflowRouteWithChildren
   '/demo/audit': typeof DemoAuditRoute
   '/demo/dashboard': typeof DemoDashboardRoute
   '/demo/duplicates': typeof DemoDuplicatesRoute
@@ -155,6 +196,8 @@ export interface FileRoutesByTo {
   '/demo/institutions': typeof DemoInstitutionsRoute
   '/demo/students': typeof DemoStudentsRoute
   '/demo': typeof DemoIndexRoute
+  '/demo/approvalflow/applications': typeof DemoApprovalflowApplicationsRoute
+  '/demo/approvalflow/scrutiny': typeof DemoApprovalflowScrutinyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -163,12 +206,15 @@ export interface FileRoutesById {
   '/demo': typeof DemoRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
+  '/_authenticated/corrections': typeof AuthenticatedCorrectionsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/duplicates': typeof AuthenticatedDuplicatesRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/institutions': typeof AuthenticatedInstitutionsRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/programmes': typeof AuthenticatedProgrammesRoute
   '/_authenticated/students': typeof AuthenticatedStudentsRoute
+  '/demo/approvalflow': typeof DemoApprovalflowRouteWithChildren
   '/demo/audit': typeof DemoAuditRoute
   '/demo/dashboard': typeof DemoDashboardRoute
   '/demo/duplicates': typeof DemoDuplicatesRoute
@@ -176,6 +222,8 @@ export interface FileRoutesById {
   '/demo/institutions': typeof DemoInstitutionsRoute
   '/demo/students': typeof DemoStudentsRoute
   '/demo/': typeof DemoIndexRoute
+  '/demo/approvalflow/applications': typeof DemoApprovalflowApplicationsRoute
+  '/demo/approvalflow/scrutiny': typeof DemoApprovalflowScrutinyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -184,12 +232,15 @@ export interface FileRouteTypes {
     | '/demo'
     | '/auth'
     | '/audit'
+    | '/corrections'
     | '/dashboard'
     | '/duplicates'
     | '/import'
     | '/institutions'
+    | '/profile'
     | '/programmes'
     | '/students'
+    | '/demo/approvalflow'
     | '/demo/audit'
     | '/demo/dashboard'
     | '/demo/duplicates'
@@ -197,17 +248,22 @@ export interface FileRouteTypes {
     | '/demo/institutions'
     | '/demo/students'
     | '/demo/'
+    | '/demo/approvalflow/applications'
+    | '/demo/approvalflow/scrutiny'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/audit'
+    | '/corrections'
     | '/dashboard'
     | '/duplicates'
     | '/import'
     | '/institutions'
+    | '/profile'
     | '/programmes'
     | '/students'
+    | '/demo/approvalflow'
     | '/demo/audit'
     | '/demo/dashboard'
     | '/demo/duplicates'
@@ -215,6 +271,8 @@ export interface FileRouteTypes {
     | '/demo/institutions'
     | '/demo/students'
     | '/demo'
+    | '/demo/approvalflow/applications'
+    | '/demo/approvalflow/scrutiny'
   id:
     | '__root__'
     | '/'
@@ -222,12 +280,15 @@ export interface FileRouteTypes {
     | '/demo'
     | '/auth'
     | '/_authenticated/audit'
+    | '/_authenticated/corrections'
     | '/_authenticated/dashboard'
     | '/_authenticated/duplicates'
     | '/_authenticated/import'
     | '/_authenticated/institutions'
+    | '/_authenticated/profile'
     | '/_authenticated/programmes'
     | '/_authenticated/students'
+    | '/demo/approvalflow'
     | '/demo/audit'
     | '/demo/dashboard'
     | '/demo/duplicates'
@@ -235,6 +296,8 @@ export interface FileRouteTypes {
     | '/demo/institutions'
     | '/demo/students'
     | '/demo/'
+    | '/demo/approvalflow/applications'
+    | '/demo/approvalflow/scrutiny'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -281,6 +344,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAuditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/corrections': {
+      id: '/_authenticated/corrections'
+      path: '/corrections'
+      fullPath: '/corrections'
+      preLoaderRoute: typeof AuthenticatedCorrectionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -309,6 +379,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInstitutionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/programmes': {
       id: '/_authenticated/programmes'
       path: '/programmes'
@@ -328,6 +405,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/demo/'
       preLoaderRoute: typeof DemoIndexRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
+    '/demo/approvalflow': {
+      id: '/demo/approvalflow'
+      path: '/approvalflow'
+      fullPath: '/demo/approvalflow'
+      preLoaderRoute: typeof DemoApprovalflowRouteImport
       parentRoute: typeof DemoRouteRoute
     }
     '/demo/audit': {
@@ -372,25 +456,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoStudentsRouteImport
       parentRoute: typeof DemoRouteRoute
     }
+    '/demo/approvalflow/applications': {
+      id: '/demo/approvalflow/applications'
+      path: '/applications'
+      fullPath: '/demo/approvalflow/applications'
+      preLoaderRoute: typeof DemoApprovalflowApplicationsRouteImport
+      parentRoute: typeof DemoApprovalflowRoute
+    }
+    '/demo/approvalflow/scrutiny': {
+      id: '/demo/approvalflow/scrutiny'
+      path: '/scrutiny'
+      fullPath: '/demo/approvalflow/scrutiny'
+      preLoaderRoute: typeof DemoApprovalflowScrutinyRouteImport
+      parentRoute: typeof DemoApprovalflowRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
+  AuthenticatedCorrectionsRoute: typeof AuthenticatedCorrectionsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDuplicatesRoute: typeof AuthenticatedDuplicatesRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedInstitutionsRoute: typeof AuthenticatedInstitutionsRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedProgrammesRoute: typeof AuthenticatedProgrammesRoute
   AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
+  AuthenticatedCorrectionsRoute: AuthenticatedCorrectionsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDuplicatesRoute: AuthenticatedDuplicatesRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedInstitutionsRoute: AuthenticatedInstitutionsRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedProgrammesRoute: AuthenticatedProgrammesRoute,
   AuthenticatedStudentsRoute: AuthenticatedStudentsRoute,
 }
@@ -398,7 +500,21 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface DemoApprovalflowRouteChildren {
+  DemoApprovalflowApplicationsRoute: typeof DemoApprovalflowApplicationsRoute
+  DemoApprovalflowScrutinyRoute: typeof DemoApprovalflowScrutinyRoute
+}
+
+const DemoApprovalflowRouteChildren: DemoApprovalflowRouteChildren = {
+  DemoApprovalflowApplicationsRoute: DemoApprovalflowApplicationsRoute,
+  DemoApprovalflowScrutinyRoute: DemoApprovalflowScrutinyRoute,
+}
+
+const DemoApprovalflowRouteWithChildren =
+  DemoApprovalflowRoute._addFileChildren(DemoApprovalflowRouteChildren)
+
 interface DemoRouteRouteChildren {
+  DemoApprovalflowRoute: typeof DemoApprovalflowRouteWithChildren
   DemoAuditRoute: typeof DemoAuditRoute
   DemoDashboardRoute: typeof DemoDashboardRoute
   DemoDuplicatesRoute: typeof DemoDuplicatesRoute
@@ -409,6 +525,7 @@ interface DemoRouteRouteChildren {
 }
 
 const DemoRouteRouteChildren: DemoRouteRouteChildren = {
+  DemoApprovalflowRoute: DemoApprovalflowRouteWithChildren,
   DemoAuditRoute: DemoAuditRoute,
   DemoDashboardRoute: DemoDashboardRoute,
   DemoDuplicatesRoute: DemoDuplicatesRoute,

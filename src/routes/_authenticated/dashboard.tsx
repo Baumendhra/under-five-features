@@ -1,14 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { toast } from "sonner";
 import {
   dashboardStatsQueryOptions,
   studentsQueryOptions,
-  getDashboardStats,
 } from "@/lib/students.functions";
-import { notificationsQueryOptions, listNotifications, markNotificationRead } from "@/lib/edutrace.functions";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -68,8 +65,51 @@ function StatCard({
 }
 
 function Dashboard() {
+  const { isStudent } = useUserProfile();
   const { data: students } = useSuspenseQuery(studentsQueryOptions);
 
+  // Students get a personal dashboard; redirect them toward /profile for full details.
+  if (isStudent) {
+    const myRecord = students[0] ?? null;
+    const apaar = myRecord ? apaarStatus(myRecord.apaar_id) : "missing";
+    const verifyStatus = myRecord ? (myRecord as any).apaar_verify_status ?? "pending" : "pending";
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-display text-3xl tracking-tight text-foreground">My Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Welcome back, {myRecord?.name ?? "student"}.</p>
+        </div>
+        {!myRecord ? (
+          <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
+            <p className="text-4xl">📋</p>
+            <p className="mt-4 text-sm text-muted-foreground">Your student record has not been linked yet. Please contact your institution.</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border border-border bg-card p-5">
+              <p className="text-sm font-medium text-muted-foreground">Student ID</p>
+              <p className="font-mono text-xl text-foreground mt-1">{myRecord.student_id ?? "—"}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <p className="text-sm font-medium text-muted-foreground">Programme</p>
+              <p className="text-xl font-semibold text-foreground mt-1">{myRecord.programme_code ?? "—"}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <p className="text-sm font-medium text-muted-foreground">APAAR Verification</p>
+              <Badge className={verifyStatus === "verified" ? "bg-green-100 text-green-800 mt-2" : "bg-amber-100 text-amber-800 mt-2"}>
+                {verifyStatus === "verified" ? "✓ Verified" : "⏳ Pending"}
+              </Badge>
+            </div>
+          </div>
+        )}
+        <div className="flex gap-3">
+          <Button asChild><Link to="/profile">View my full profile</Link></Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Staff / admin dashboard — existing rich view below
   const verified = students.filter((s) => apaarStatus(s.apaar_id) === "verified").length;
   const missing = students.filter((s) => apaarStatus(s.apaar_id) === "missing").length;
   const invalid = students.filter((s) => apaarStatus(s.apaar_id) === "invalid").length;
