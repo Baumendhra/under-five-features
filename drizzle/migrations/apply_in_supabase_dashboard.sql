@@ -33,12 +33,27 @@ create policy "Users can insert their own students"
 
 create policy "Users can update their own students"
   on public.students for update to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (
+    auth.uid() = user_id
+    OR (
+      EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role IN ('aicte_admin', 'institution_admin', 'officer') AND up.institution_id = public.students.institution_id)
+    )
+  )
+  with check (
+    auth.uid() = user_id
+    OR (
+      EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role IN ('aicte_admin', 'institution_admin', 'officer') AND up.institution_id = public.students.institution_id)
+    )
+  );
 
 create policy "Users can delete their own students"
   on public.students for delete to authenticated
-  using (auth.uid() = user_id);
+  using (
+    auth.uid() = user_id
+    OR (
+      EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role IN ('aicte_admin', 'institution_admin', 'officer') AND up.institution_id = public.students.institution_id)
+    )
+  );
 
 create index if not exists students_user_idx on public.students (user_id);
 create unique index if not exists students_user_apaar_idx on public.students (user_id, apaar_id)

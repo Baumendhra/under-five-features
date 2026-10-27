@@ -4,8 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { studentsQueryOptions } from "@/lib/students.functions";
-import { verifyStudentApaar } from "@/lib/edutrace.functions";
+import { verifyStudentApaar, exportStudentsCsv } from "@/lib/edutrace.functions";
 import { apaarStatus } from "@/lib/student-import";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -62,8 +63,11 @@ function StudentsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "missing" | "invalid" | "pending" | "verified">("all");
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const queryClient = useQueryClient();
   const verifyFn = useServerFn(verifyStudentApaar);
+  const exportFn = useServerFn(exportStudentsCsv);
+  const { canExport, canImportStudents } = useUserProfile();
 
   const filtered = students.filter((s) => {
     const q = search.trim().toLowerCase();
@@ -101,6 +105,29 @@ function StudentsPage() {
     }
   }
 
+  async function handleExport(filtered: boolean) {
+    setExporting(true);
+    try {
+      const filterStatus = filtered && filter !== "all" ? filter : "all";
+      const result = await exportFn({ data: { filterStatus } });
+      // Trigger browser download
+      const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${result.filename}`);
+    } catch {
+      toast.error("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const counts = {
     all: students.length,
     missing: students.filter((s) => apaarStatus(s.apaar_id) === "missing").length,
@@ -130,10 +157,34 @@ function StudentsPage() {
             {students.length.toLocaleString()} record{students.length !== 1 ? "s" : ""} · showing {filtered.length.toLocaleString()}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <a href="/import">Import more</a>
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          {canExport && (
+            <>
+              <Button
+                id="export-filtered-btn"
+                variant="outline"
+                size="sm"
+                disabled={exporting || filtered.length === 0}
+                onClick={() => void handleExport(true)}
+              >
+                {exporting ? "Exporting…" : `Export filtered (${filtered.length})`}
+              </Button>
+              <Button
+                id="export-all-btn"
+                variant="outline"
+                size="sm"
+                disabled={exporting || students.length === 0}
+                onClick={() => void handleExport(false)}
+              >
+                Export all ({students.length})
+              </Button>
+            </>
+          )}
+          {canImportStudents && (
+            <Button asChild variant="outline" size="sm">
+              <a href="/import">Import more</a>
+            </Button>
+          )}
         </div>
       </div>
 

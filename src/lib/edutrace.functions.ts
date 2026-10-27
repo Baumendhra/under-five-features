@@ -159,10 +159,19 @@ export const createProgramme = createServerFn({ method: "POST" })
 export const getDashboardStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<DashboardStats> => {
-    const { data: students, error } = await context.supabase
+    // aicte_admin sees all students; institution/officer sees own institution only
+    let query = context.supabase
       .from("students")
-      .select("apaar_id, apaar_verify_status, category, programme_code, intake_type, created_at")
-      .eq("user_id", context.userId);
+      .select("apaar_id, apaar_verify_status, category, programme_code, intake_type, created_at");
+
+    if (context.role !== "aicte_admin" && context.institutionId) {
+      query = query.eq("institution_id", context.institutionId);
+    } else if (context.role !== "aicte_admin") {
+      // No institution_id set: fall back to scoping by user_id
+      query = query.eq("user_id", context.userId);
+    }
+
+    const { data: students, error } = await query;
     if (error) throw new Error(error.message);
 
     const rows = students ?? [];
@@ -372,21 +381,42 @@ export const userProfileQueryOptions = queryOptions({
 
 // ── Export ────────────────────────────────────────────────────────────────
 
+/** Masks all but first 4 and last 2 digits of APAAR — e.g. 123456789012 → 1234••••9012 */
+function maskApaar(raw: string | null): string {
+  if (!raw || raw.length < 6) return raw ?? "";
+  const cleaned = raw.replace(/[\s-]/g, "");
+  return cleaned.slice(0, 4) + "••••" + cleaned.slice(-4);
+}
+
 export const exportStudentsCsv = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .validator((input: { filterStatus?: string } | undefined) => input ?? {})
+  .handler(async ({ data: filter, context }) => {
+    // Scope query by institution for non-admin roles
+    let query = context.supabase
       .from("students")
       .select("student_id, apaar_id, name, dob, gender, category, programme_code, intake_type, contact, apaar_verify_status, current_status, created_at")
-      .eq("user_id", context.userId)
       .order("name");
+
+    if (context.role !== "aicte_admin" && context.institutionId) {
+      query = query.eq("institution_id", context.institutionId);
+    } else if (context.role !== "aicte_admin") {
+      query = query.eq("user_id", context.userId);
+    }
+
+    // Apply optional status filter
+    if (filter?.filterStatus && filter.filterStatus !== "all") {
+      query = query.eq("apaar_verify_status", filter.filterStatus);
+    }
+
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
 
     const rows = data ?? [];
-    const headers = ["StudentID", "APAAR_ID", "Name", "DOB", "Gender", "Category", "ProgrammeCode", "IntakeType", "Contact", "VerificationStatus", "CurrentStatus", "ImportedAt"];
+    const headers = ["StudentID", "APAAR_ID_masked", "Name", "DOB", "Gender", "Category", "ProgrammeCode", "IntakeType", "Contact", "VerificationStatus", "CurrentStatus", "ImportedAt"];
     const csvRows = rows.map((r) => [
       r.student_id ?? "",
-      r.apaar_id ?? "",
+      maskApaar(r.apaar_id),          // ← masked, never raw APAAR in export
       r.name,
       r.dob ?? "",
       (r as Record<string, unknown>).gender as string ?? "",
@@ -399,8 +429,23 @@ export const exportStudentsCsv = createServerFn({ method: "GET" })
       r.created_at?.slice(0, 10) ?? "",
     ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
 
+    // Audit: record that an export happened
+    await context.supabase.from("audit_logs").insert({
+      user_id: context.userId,
+      action: "export",
+      entity_type: "student",
+      entity_id: null,
+      details: {
+        row_count: rows.length,
+        filter_status: filter?.filterStatus ?? "all",
+        institution_id: context.institutionId,
+      },
+    }).throwOnError();
+
+    const filename = `edutrace-export-${new Date().toISOString().slice(0, 10)}${filter?.filterStatus && filter.filterStatus !== "all" ? `-${filter.filterStatus}` : ""}.csv`;
+
     return {
       csv: [headers.join(","), ...csvRows].join("\n"),
-      filename: `edutrace-export-${new Date().toISOString().slice(0, 10)}.csv`,
+      filename,
     };
   });

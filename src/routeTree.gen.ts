@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DemoRouteRouteImport } from './routes/demo.route'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDuplicatesRouteImport } from './routes/_authenticated/duplicates'
@@ -19,6 +20,13 @@ import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedInstitutionsRouteImport } from './routes/_authenticated/institutions'
 import { Route as AuthenticatedProgrammesRouteImport } from './routes/_authenticated/programmes'
 import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated/students'
+import { Route as DemoIndexRouteImport } from './routes/demo.index'
+import { Route as DemoAuditRouteImport } from './routes/demo.audit'
+import { Route as DemoDashboardRouteImport } from './routes/demo.dashboard'
+import { Route as DemoDuplicatesRouteImport } from './routes/demo.duplicates'
+import { Route as DemoImportRouteImport } from './routes/demo.import'
+import { Route as DemoInstitutionsRouteImport } from './routes/demo.institutions'
+import { Route as DemoStudentsRouteImport } from './routes/demo.students'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -32,6 +40,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRouteRoute = DemoRouteRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
@@ -70,9 +83,45 @@ const AuthenticatedStudentsRoute = AuthenticatedStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const DemoIndexRoute = DemoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
+const DemoAuditRoute = DemoAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
+const DemoDashboardRoute = DemoDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
+const DemoDuplicatesRoute = DemoDuplicatesRouteImport.update({
+  id: '/duplicates',
+  path: '/duplicates',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
+const DemoImportRoute = DemoImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
+const DemoInstitutionsRoute = DemoInstitutionsRouteImport.update({
+  id: '/institutions',
+  path: '/institutions',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
+const DemoStudentsRoute = DemoStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/demo': typeof DemoRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -81,6 +130,13 @@ export interface FileRoutesByFullPath {
   '/institutions': typeof AuthenticatedInstitutionsRoute
   '/programmes': typeof AuthenticatedProgrammesRoute
   '/students': typeof AuthenticatedStudentsRoute
+  '/demo/audit': typeof DemoAuditRoute
+  '/demo/dashboard': typeof DemoDashboardRoute
+  '/demo/duplicates': typeof DemoDuplicatesRoute
+  '/demo/import': typeof DemoImportRoute
+  '/demo/institutions': typeof DemoInstitutionsRoute
+  '/demo/students': typeof DemoStudentsRoute
+  '/demo/': typeof DemoIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -92,11 +148,19 @@ export interface FileRoutesByTo {
   '/institutions': typeof AuthenticatedInstitutionsRoute
   '/programmes': typeof AuthenticatedProgrammesRoute
   '/students': typeof AuthenticatedStudentsRoute
+  '/demo/audit': typeof DemoAuditRoute
+  '/demo/dashboard': typeof DemoDashboardRoute
+  '/demo/duplicates': typeof DemoDuplicatesRoute
+  '/demo/import': typeof DemoImportRoute
+  '/demo/institutions': typeof DemoInstitutionsRoute
+  '/demo/students': typeof DemoStudentsRoute
+  '/demo': typeof DemoIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/demo': typeof DemoRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -105,11 +169,19 @@ export interface FileRoutesById {
   '/_authenticated/institutions': typeof AuthenticatedInstitutionsRoute
   '/_authenticated/programmes': typeof AuthenticatedProgrammesRoute
   '/_authenticated/students': typeof AuthenticatedStudentsRoute
+  '/demo/audit': typeof DemoAuditRoute
+  '/demo/dashboard': typeof DemoDashboardRoute
+  '/demo/duplicates': typeof DemoDuplicatesRoute
+  '/demo/import': typeof DemoImportRoute
+  '/demo/institutions': typeof DemoInstitutionsRoute
+  '/demo/students': typeof DemoStudentsRoute
+  '/demo/': typeof DemoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/demo'
     | '/auth'
     | '/audit'
     | '/dashboard'
@@ -118,6 +190,13 @@ export interface FileRouteTypes {
     | '/institutions'
     | '/programmes'
     | '/students'
+    | '/demo/audit'
+    | '/demo/dashboard'
+    | '/demo/duplicates'
+    | '/demo/import'
+    | '/demo/institutions'
+    | '/demo/students'
+    | '/demo/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,10 +208,18 @@ export interface FileRouteTypes {
     | '/institutions'
     | '/programmes'
     | '/students'
+    | '/demo/audit'
+    | '/demo/dashboard'
+    | '/demo/duplicates'
+    | '/demo/import'
+    | '/demo/institutions'
+    | '/demo/students'
+    | '/demo'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/demo'
     | '/auth'
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
@@ -141,11 +228,19 @@ export interface FileRouteTypes {
     | '/_authenticated/institutions'
     | '/_authenticated/programmes'
     | '/_authenticated/students'
+    | '/demo/audit'
+    | '/demo/dashboard'
+    | '/demo/duplicates'
+    | '/demo/import'
+    | '/demo/institutions'
+    | '/demo/students'
+    | '/demo/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  DemoRouteRoute: typeof DemoRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
 }
 
@@ -170,6 +265,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/audit': {
@@ -221,6 +323,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/demo/': {
+      id: '/demo/'
+      path: '/'
+      fullPath: '/demo/'
+      preLoaderRoute: typeof DemoIndexRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
+    '/demo/audit': {
+      id: '/demo/audit'
+      path: '/audit'
+      fullPath: '/demo/audit'
+      preLoaderRoute: typeof DemoAuditRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
+    '/demo/dashboard': {
+      id: '/demo/dashboard'
+      path: '/dashboard'
+      fullPath: '/demo/dashboard'
+      preLoaderRoute: typeof DemoDashboardRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
+    '/demo/duplicates': {
+      id: '/demo/duplicates'
+      path: '/duplicates'
+      fullPath: '/demo/duplicates'
+      preLoaderRoute: typeof DemoDuplicatesRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
+    '/demo/import': {
+      id: '/demo/import'
+      path: '/import'
+      fullPath: '/demo/import'
+      preLoaderRoute: typeof DemoImportRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
+    '/demo/institutions': {
+      id: '/demo/institutions'
+      path: '/institutions'
+      fullPath: '/demo/institutions'
+      preLoaderRoute: typeof DemoInstitutionsRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
+    '/demo/students': {
+      id: '/demo/students'
+      path: '/students'
+      fullPath: '/demo/students'
+      preLoaderRoute: typeof DemoStudentsRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
   }
 }
 
@@ -247,9 +398,34 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface DemoRouteRouteChildren {
+  DemoAuditRoute: typeof DemoAuditRoute
+  DemoDashboardRoute: typeof DemoDashboardRoute
+  DemoDuplicatesRoute: typeof DemoDuplicatesRoute
+  DemoImportRoute: typeof DemoImportRoute
+  DemoInstitutionsRoute: typeof DemoInstitutionsRoute
+  DemoStudentsRoute: typeof DemoStudentsRoute
+  DemoIndexRoute: typeof DemoIndexRoute
+}
+
+const DemoRouteRouteChildren: DemoRouteRouteChildren = {
+  DemoAuditRoute: DemoAuditRoute,
+  DemoDashboardRoute: DemoDashboardRoute,
+  DemoDuplicatesRoute: DemoDuplicatesRoute,
+  DemoImportRoute: DemoImportRoute,
+  DemoInstitutionsRoute: DemoInstitutionsRoute,
+  DemoStudentsRoute: DemoStudentsRoute,
+  DemoIndexRoute: DemoIndexRoute,
+}
+
+const DemoRouteRouteWithChildren = DemoRouteRoute._addFileChildren(
+  DemoRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  DemoRouteRoute: DemoRouteRouteWithChildren,
   AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport

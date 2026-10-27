@@ -100,11 +100,36 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       throw new Error('Unauthorized: No user ID found in token');
     }
 
+    const userId = data.claims.sub as string;
+
+    // ── Fetch role + institution_id from user_profiles ────────────────────
+    // Best-effort: if user_profiles doesn't exist yet (migration pending) we
+    // default to 'officer' / null so the rest of the app still loads.
+    let role: string = 'officer';
+    let institutionId: string | null = null;
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role, institution_id')
+        .eq('id', userId)
+        .maybeSingle();
+      if (profile) {
+        role = (profile as Record<string, unknown>).role as string ?? 'officer';
+        institutionId = (profile as Record<string, unknown>).institution_id as string | null ?? null;
+      }
+    } catch {
+      // Swallow — profile table may not exist yet
+    }
+
     return next({
       context: {
         supabase,
-        userId: data.claims.sub,
+        userId,
         claims: data.claims,
+        /** aicte_admin | institution_admin | officer | student */
+        role,
+        /** Institution this user belongs to, null for global admins */
+        institutionId,
       },
     });
   },
