@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -25,13 +29,18 @@ function DemoDuplicates() {
     queryKey: ["demo-students"],
     queryFn: () => getDemoStudents(),
   });
-  const [resolutions, setResolutions] = useState<Record<string, { resolution: Resolution; notes: string; resolved: boolean }>>({});
+  const [resolutions, setResolutions] = useState<
+    Record<string, { resolution: Resolution | ""; notes: string; resolved: boolean }>
+  >({});
 
   const inMemoryDups = detectDuplicates(students as any);
 
   function handleResolve(dupKey: string) {
     const r = resolutions[dupKey];
-    if (!r?.resolution) { toast.error("Select a resolution before marking as resolved."); return; }
+    if (!r?.resolution) {
+      toast.error("Select a resolution before marking as resolved.");
+      return;
+    }
     setResolutions((prev) => ({ ...prev, [dupKey]: { ...r, resolved: true } }));
     toast.success("Duplicate case marked as resolved (demo).");
   }
@@ -39,11 +48,16 @@ function DemoDuplicates() {
   if (inMemoryDups.length === 0) {
     return (
       <div className="space-y-4">
-        <h1 className="font-display text-3xl tracking-tight text-foreground">Duplicate Review <span className="text-sm font-normal text-amber-600">(Demo)</span></h1>
+        <h1 className="font-display text-3xl tracking-tight text-foreground">
+          Duplicate Review <span className="text-sm font-normal text-amber-600">(Demo)</span>
+        </h1>
         <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
           <p className="text-4xl">✅</p>
           <p className="mt-4 font-display text-xl text-foreground">No duplicates detected</p>
-          <p className="mt-2 text-sm text-muted-foreground">The demo sandbox has no duplicate student records. Import more students with matching APAAR IDs or names/DOB to see this page in action.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The demo sandbox has no duplicate student records. Import more students with matching
+            APAAR IDs or names/DOB to see this page in action.
+          </p>
         </div>
       </div>
     );
@@ -52,42 +66,77 @@ function DemoDuplicates() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl tracking-tight text-foreground">Duplicate Review <span className="text-sm font-normal text-amber-600">(Demo)</span></h1>
-        <p className="mt-1 text-sm text-muted-foreground">{inMemoryDups.length} potential duplicate pair{inMemoryDups.length !== 1 ? "s" : ""} found in the demo registry.</p>
+        <h1 className="font-display text-3xl tracking-tight text-foreground">
+          Duplicate Review <span className="text-sm font-normal text-amber-600">(Demo)</span>
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {inMemoryDups.length} potential duplicate pair{inMemoryDups.length !== 1 ? "s" : ""} found
+          in the demo registry.
+        </p>
       </div>
 
       <div className="space-y-4">
         {inMemoryDups.map((dup, idx) => {
-          const key = `${dup.studentAId}-${dup.studentBId}`;
+          const studentA = students[dup.indexA];
+          const studentB = students[dup.indexB];
+          const key = `${studentA?.id ?? dup.indexA}-${studentB?.id ?? dup.indexB}`;
           const r = resolutions[key] ?? { resolution: "", notes: "", resolved: false };
           return (
-            <div key={key} className={cn("rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-sm", r.resolved && "opacity-60")}>
+            <div
+              key={key}
+              className={cn(
+                "rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-sm",
+                r.resolved && "opacity-60",
+              )}
+            >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Badge className="bg-red-100 text-red-800">Duplicate #{idx + 1}</Badge>
-                    <Badge variant="outline" className="text-xs capitalize">{(dup as any).reason?.replace(/_/g, " ") ?? "name + DOB match"}</Badge>
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {dup.reason.replace(/_/g, " ")}
+                    </Badge>
                     {r.resolved && <Badge className="bg-green-100 text-green-800">Resolved</Badge>}
                   </div>
                   <div className="grid grid-cols-2 gap-4 pt-2 text-sm">
                     <div className="rounded-lg border border-border p-3">
-                      <p className="font-semibold text-foreground">{(dup as any).studentA?.name ?? "Student A"}</p>
-                      <p className="text-xs text-muted-foreground">ID: {(dup as any).studentA?.student_id ?? "—"}</p>
-                      <p className="text-xs text-muted-foreground">APAAR: {(dup as any).studentA?.apaar_id || "—"}</p>
-                      <p className="text-xs text-muted-foreground">DOB: {(dup as any).studentA?.dob ?? "—"}</p>
+                      <p className="font-semibold text-foreground">
+                        {studentA?.name ?? "Student A"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        ID: {studentA?.student_id ?? "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        APAAR: {studentA?.apaar_id || "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">DOB: {studentA?.dob ?? "—"}</p>
                     </div>
                     <div className="rounded-lg border border-border p-3">
-                      <p className="font-semibold text-foreground">{(dup as any).studentB?.name ?? "Student B"}</p>
-                      <p className="text-xs text-muted-foreground">ID: {(dup as any).studentB?.student_id ?? "—"}</p>
-                      <p className="text-xs text-muted-foreground">APAAR: {(dup as any).studentB?.apaar_id || "—"}</p>
-                      <p className="text-xs text-muted-foreground">DOB: {(dup as any).studentB?.dob ?? "—"}</p>
+                      <p className="font-semibold text-foreground">
+                        {studentB?.name ?? "Student B"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        ID: {studentB?.student_id ?? "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        APAAR: {studentB?.apaar_id || "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">DOB: {studentB?.dob ?? "—"}</p>
                     </div>
                   </div>
                 </div>
 
                 {!r.resolved && (
                   <div className="flex flex-col gap-3 min-w-48">
-                    <Select value={r.resolution} onValueChange={(v) => setResolutions((prev) => ({ ...prev, [key]: { ...r, resolution: v as Resolution } }))}>
+                    <Select
+                      value={r.resolution}
+                      onValueChange={(v) =>
+                        setResolutions((prev) => ({
+                          ...prev,
+                          [key]: { ...r, resolution: v as Resolution },
+                        }))
+                      }
+                    >
                       <SelectTrigger id={`demo-dup-resolution-${idx}`} className="w-full">
                         <SelectValue placeholder="Choose resolution…" />
                       </SelectTrigger>
@@ -101,10 +150,21 @@ function DemoDuplicates() {
                     <Textarea
                       placeholder="Notes (optional)"
                       value={r.notes}
-                      onChange={(e) => setResolutions((prev) => ({ ...prev, [key]: { ...r, notes: e.target.value } }))}
+                      onChange={(e) =>
+                        setResolutions((prev) => ({
+                          ...prev,
+                          [key]: { ...r, notes: e.target.value },
+                        }))
+                      }
                       rows={2}
                     />
-                    <Button id={`demo-dup-resolve-${idx}`} size="sm" onClick={() => handleResolve(key)}>Mark resolved</Button>
+                    <Button
+                      id={`demo-dup-resolve-${idx}`}
+                      size="sm"
+                      onClick={() => handleResolve(key)}
+                    >
+                      Mark resolved
+                    </Button>
                   </div>
                 )}
               </div>

@@ -3,10 +3,7 @@ import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  duplicateCasesQueryOptions,
-  resolveDuplicateCase,
-} from "@/lib/edutrace.functions";
+import { duplicateCasesQueryOptions, resolveDuplicateCase } from "@/lib/edutrace.functions";
 import { studentsQueryOptions } from "@/lib/students.functions";
 import { detectDuplicates } from "@/lib/duplicate-detection";
 import { Button } from "@/components/ui/button";
@@ -102,7 +99,9 @@ function DuplicatesPage() {
       <section>
         <div className="flex items-center justify-between">
           <h2 className="font-display text-xl text-foreground">Live scan — current registry</h2>
-          <Badge variant="secondary">{inMemoryDups.length} pair{inMemoryDups.length !== 1 ? "s" : ""} detected</Badge>
+          <Badge variant="secondary">
+            {inMemoryDups.length} pair{inMemoryDups.length !== 1 ? "s" : ""} detected
+          </Badge>
         </div>
         {inMemoryDups.length === 0 ? (
           <div className="mt-4 rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
@@ -115,7 +114,10 @@ function DuplicatesPage() {
               const b = students[pair.indexB];
               if (!a || !b) return null;
               return (
-                <div key={i} className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+                <div
+                  key={i}
+                  className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20"
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
@@ -131,8 +133,12 @@ function DuplicatesPage() {
                     {[a, b].map((s, j) => (
                       <div key={j} className="rounded-lg border border-border bg-card p-3">
                         <p className="font-medium text-foreground">{s.name}</p>
-                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">{s.apaar_id ?? "No APAAR"}</p>
-                        <p className="text-xs text-muted-foreground">{s.dob ?? "No DOB"} · {s.category ?? "—"} · {s.programme_code ?? "—"}</p>
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                          {s.apaar_id ?? "No APAAR"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.dob ?? "No DOB"} · {s.category ?? "—"} · {s.programme_code ?? "—"}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -156,9 +162,15 @@ function DuplicatesPage() {
               <div key={c.id} className="rounded-xl border border-border bg-card p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <Badge className={cn("text-xs", STATUS_BADGE[c.status] ?? "")}>{c.status}</Badge>
-                    <Badge variant="outline" className="text-xs">{REASON_LABEL[c.reason] ?? c.reason}</Badge>
-                    <span className="text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString("en-IN")}</span>
+                    <Badge className={cn("text-xs", STATUS_BADGE[c.status] ?? "")}>
+                      {c.status}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {REASON_LABEL[c.reason] ?? c.reason}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(c.created_at).toLocaleDateString("en-IN")}
+                    </span>
                   </div>
                   <Button
                     variant="outline"
@@ -215,10 +227,15 @@ function DuplicatesPage() {
           <h2 className="font-display text-xl text-foreground">Resolved cases</h2>
           <div className="mt-4 space-y-2">
             {closedCases.map((c) => (
-              <div key={c.id} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-3">
+              <div
+                key={c.id}
+                className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-3"
+              >
                 <div className="flex items-center gap-3">
                   <Badge className={cn("text-xs", STATUS_BADGE[c.status] ?? "")}>{c.status}</Badge>
-                  <span className="text-sm text-muted-foreground">{REASON_LABEL[c.reason] ?? c.reason}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {REASON_LABEL[c.reason] ?? c.reason}
+                  </span>
                 </div>
                 <div className="text-right text-xs text-muted-foreground">
                   <p>{c.resolution ?? "—"}</p>

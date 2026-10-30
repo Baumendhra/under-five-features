@@ -12,4 +12,3 @@ export function setDemoRole(role: "aicte_admin" | "institution_admin" | "officer
   // @ts-ignore
   DEMO_USER.role = role;
 }
-

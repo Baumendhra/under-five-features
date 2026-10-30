@@ -1,16 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  dashboardStatsQueryOptions,
-  studentsQueryOptions,
-} from "@/lib/students.functions";
+import { dashboardStatsQueryOptions, studentsQueryOptions } from "@/lib/students.functions";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  CartesianGrid,
+  Legend,
 } from "recharts";
 import { apaarStatus } from "@/lib/student-import";
 
@@ -23,7 +31,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       { title: "Dashboard — EduTrace" },
       {
         name: "description",
-        content: "Overview of your student registry: totals, APAAR verification status and recent entries.",
+        content:
+          "Overview of your student registry: totals, APAAR verification status and recent entries.",
       },
     ],
   }),
@@ -47,18 +56,24 @@ function StatCard({
   accent?: "green" | "red" | "yellow" | "blue";
   icon?: string;
 }) {
-  const accentClass = {
-    green: "border-l-4 border-l-green-500",
-    red: "border-l-4 border-l-red-400",
-    yellow: "border-l-4 border-l-amber-400",
-    blue: "border-l-4 border-l-blue-400",
-  }[accent ?? ""] ?? "";
+  const accentClass = accent
+    ? {
+        green: "border-l-4 border-l-green-500",
+        red: "border-l-4 border-l-red-400",
+        yellow: "border-l-4 border-l-amber-400",
+        blue: "border-l-4 border-l-blue-400",
+      }[accent]
+    : "";
 
   return (
-    <div className={`rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-md ${accentClass}`}>
+    <div
+      className={`rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-md ${accentClass}`}
+    >
       {icon && <div className="mb-2 text-2xl">{icon}</div>}
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <p className="font-display text-4xl text-foreground">{typeof value === "number" ? value.toLocaleString() : value}</p>
+      <p className="font-display text-4xl text-foreground">
+        {typeof value === "number" ? value.toLocaleString() : value}
+      </p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
@@ -67,7 +82,6 @@ function StatCard({
 function Dashboard() {
   const { isStudent } = useUserProfile();
   const { data: students } = useSuspenseQuery(studentsQueryOptions);
-
 
   // Staff / admin dashboard — existing rich view below
   const verified = students.filter((s) => apaarStatus(s.apaar_id) === "verified").length;
@@ -132,8 +146,20 @@ function Dashboard() {
           accent="green"
           icon="✅"
         />
-        <StatCard label="Missing APAAR" value={missing} hint="Flagged for follow-up" accent="yellow" icon="⚠️" />
-        <StatCard label="Invalid APAAR" value={invalid} hint="Format error — needs correction" accent="red" icon="❌" />
+        <StatCard
+          label="Missing APAAR"
+          value={missing}
+          hint="Flagged for follow-up"
+          accent="yellow"
+          icon="⚠️"
+        />
+        <StatCard
+          label="Invalid APAAR"
+          value={invalid}
+          hint="Format error — needs correction"
+          accent="red"
+          icon="❌"
+        />
       </div>
 
       {/* Charts row */}
@@ -144,7 +170,15 @@ function Dashboard() {
             <h2 className="mb-4 font-display text-lg text-foreground">APAAR Status</h2>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={apaarPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                <Pie
+                  data={apaarPieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
                   {apaarPieData.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
@@ -179,7 +213,16 @@ function Dashboard() {
               <h2 className="mb-4 font-display text-lg text-foreground">Admission Types</h2>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={intakeData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} label>
+                  <Pie
+                    data={intakeData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    label
+                  >
                     {intakeData.map((_, i) => (
                       <Cell key={i} fill={CATEGORY_COLORS[(i + 2) % CATEGORY_COLORS.length]} />
                     ))}
@@ -213,13 +256,18 @@ function Dashboard() {
       <section>
         <div className="flex items-center justify-between">
           <h2 className="font-display text-2xl text-foreground">Recent students</h2>
-          <Link to="/students" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+          <Link
+            to="/students"
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
             View all →
           </Link>
         </div>
         {recent.length === 0 ? (
           <div className="mt-4 rounded-xl border border-dashed border-border bg-card p-8 text-center">
-            <p className="text-sm text-muted-foreground">No students yet. Import your first CSV to build the registry.</p>
+            <p className="text-sm text-muted-foreground">
+              No students yet. Import your first CSV to build the registry.
+            </p>
             <Button asChild variant="outline" className="mt-4">
               <Link to="/import">Import students</Link>
             </Button>
@@ -231,12 +279,15 @@ function Dashboard() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">{student.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {student.programme_code ?? "—"} · {student.dob ?? "no DOB"} · {student.category ?? "—"}
+                    {student.programme_code ?? "—"} · {student.dob ?? "no DOB"} ·{" "}
+                    {student.category ?? "—"}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {student.intake_type && (
-                    <Badge variant="outline" className="text-xs">{student.intake_type}</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {student.intake_type}
+                    </Badge>
                   )}
                   <Badge
                     variant="secondary"

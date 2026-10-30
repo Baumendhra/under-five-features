@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { queryOptions } from "@tanstack/react-query";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Json } from "@/integrations/supabase/types";
 import { verifyApaarId } from "@/lib/apaar-adapter";
 import {
   requireAicteAdmin,
@@ -66,7 +67,7 @@ export type AuditEntry = {
   action: string;
   entity_type: string;
   entity_id: string | null;
-  details: Record<string, unknown> | null;
+  details: Json;
   created_at: string;
 };
 
@@ -92,10 +93,7 @@ export const listInstitutions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     // All authenticated users can list institutions (needed for forms etc.)
-    const { data, error } = await context.supabase
-      .from("institutions")
-      .select("*")
-      .order("name");
+    const { data, error } = await context.supabase.from("institutions").select("*").order("name");
     if (error) throw new Error(error.message);
     return (data ?? []) as Institution[];
   });
@@ -178,7 +176,11 @@ export const createProgramme = createServerFn({ method: "POST" })
       throw new Error("Forbidden: only institution admins may create programmes.");
     }
     // Institution admin can only create programmes for their own institution
-    if (context.role === "institution_admin" && context.institutionId && data.institution_id !== context.institutionId) {
+    if (
+      context.role === "institution_admin" &&
+      context.institutionId &&
+      data.institution_id !== context.institutionId
+    ) {
       throw new Error("Forbidden: you may only create programmes for your institution.");
     }
     const { data: prog, error } = await context.supabase
@@ -207,7 +209,12 @@ export const getDashboardStats = createServerFn({ method: "GET" })
       .select("apaar_id, apaar_verify_status, category, programme_code, intake_type, created_at");
 
     // Apply role-scoped data filter
-    query = applyStudentScope(query as any, context.role, context.userId, context.institutionId) as any;
+    query = applyStudentScope(
+      query as any,
+      context.role,
+      context.userId,
+      context.institutionId,
+    ) as any;
 
     const { data: students, error } = await query;
     if (error) throw new Error(error.message);
@@ -215,7 +222,10 @@ export const getDashboardStats = createServerFn({ method: "GET" })
     const rows = students ?? [];
     const APAAR_RE = /^\d{12}$/;
 
-    let verified = 0, missing = 0, invalid = 0, pending = 0;
+    let verified = 0,
+      missing = 0,
+      invalid = 0,
+      pending = 0;
     const categories: Record<string, number> = {};
     const programmes: Record<string, number> = {};
     const intakeTypes: Record<string, number> = {};
@@ -281,8 +291,11 @@ export const verifyStudentApaar = createServerFn({ method: "POST" })
 
     const result = await verifyApaarId(data.apaarId);
     const newStatus =
-      result.status === "verified" ? "verified" :
-      result.status === "not_found" ? "not_found" : "failed";
+      result.status === "verified"
+        ? "verified"
+        : result.status === "not_found"
+          ? "not_found"
+          : "failed";
 
     // Scope update: staff scoped by institution, student scoped by user_id
     let updateQuery = context.supabase
@@ -473,7 +486,12 @@ export const exportStudentsCsv = createServerFn({ method: "GET" })
       )
       .order("name");
 
-    query = applyStudentScope(query as any, context.role, context.userId, context.institutionId) as any;
+    query = applyStudentScope(
+      query as any,
+      context.role,
+      context.userId,
+      context.institutionId,
+    ) as any;
 
     if (filter?.filterStatus && filter.filterStatus !== "all") {
       query = (query as any).eq("apaar_verify_status", filter.filterStatus);
@@ -484,9 +502,18 @@ export const exportStudentsCsv = createServerFn({ method: "GET" })
 
     const rows = data ?? [];
     const headers = [
-      "StudentID", "APAAR_ID_masked", "Name", "DOB", "Gender",
-      "Category", "ProgrammeCode", "IntakeType", "Contact",
-      "VerificationStatus", "CurrentStatus", "ImportedAt",
+      "StudentID",
+      "APAAR_ID_masked",
+      "Name",
+      "DOB",
+      "Gender",
+      "Category",
+      "ProgrammeCode",
+      "IntakeType",
+      "Contact",
+      "VerificationStatus",
+      "CurrentStatus",
+      "ImportedAt",
     ];
     const csvRows = rows.map((r) =>
       [

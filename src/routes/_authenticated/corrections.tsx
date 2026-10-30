@@ -46,9 +46,15 @@ function CorrectionsPage() {
     setProcessing(requestId);
     try {
       const result = await reviewFn({
-        data: { requestId, decision, reviewerNotes: notes[requestId] },
+        data: {
+          requestId,
+          decision,
+          ...(notes[requestId] ? { reviewerNotes: notes[requestId] } : {}),
+        },
       });
-      toast.success(decision === "approved" ? "Correction approved and applied." : "Request rejected.");
+      toast.success(
+        decision === "approved" ? "Correction approved and applied." : "Request rejected.",
+      );
       await queryClient.invalidateQueries({ queryKey: ["pending-correction-requests"] });
       await queryClient.invalidateQueries({ queryKey: ["students"] });
     } catch (err: any) {
@@ -66,9 +72,12 @@ function CorrectionsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-3xl tracking-tight text-foreground">Correction Requests</h1>
+        <h1 className="font-display text-3xl tracking-tight text-foreground">
+          Correction Requests
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Review student-submitted data correction requests. Only approved corrections update the official record.
+          Review student-submitted data correction requests. Only approved corrections update the
+          official record.
         </p>
       </div>
 
@@ -89,7 +98,9 @@ function CorrectionsPage() {
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="font-semibold text-foreground">
                       {(req as any).students?.name ?? "Unknown student"} —{" "}
-                      <span className="capitalize font-normal">{req.field_name.replace(/_/g, " ")} correction</span>
+                      <span className="capitalize font-normal">
+                        {req.field_name.replace(/_/g, " ")} correction
+                      </span>
                     </p>
                     <p className="text-sm text-muted-foreground">
                       <span className="font-medium">Current:</span>{" "}
@@ -102,7 +113,11 @@ function CorrectionsPage() {
                       <span className="font-medium">Reason:</span> {req.reason}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Submitted {new Date(req.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                      Submitted{" "}
+                      {new Date(req.created_at).toLocaleString("en-IN", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
                     </p>
                   </div>
                   <Badge className={STATUS_COLOR[req.status]}>{req.status}</Badge>
@@ -147,17 +162,23 @@ function CorrectionsPage() {
           <h2 className="font-display text-xl text-foreground mb-4">Recently Actioned</h2>
           <div className="space-y-3">
             {actioned.map((req) => (
-              <div key={req.id} className={cn("rounded-xl border border-border bg-card p-4 opacity-70")}>
+              <div
+                key={req.id}
+                className={cn("rounded-xl border border-border bg-card p-4 opacity-70")}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-foreground">
-                      {(req as any).students?.name ?? "—"} — {req.field_name.replace(/_/g, " ")} correction
+                      {(req as any).students?.name ?? "—"} — {req.field_name.replace(/_/g, " ")}{" "}
+                      correction
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {req.current_value ?? "—"} → {req.proposed_value}
                     </p>
                     {req.reviewer_notes && (
-                      <p className="text-xs text-muted-foreground mt-0.5">Note: {req.reviewer_notes}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Note: {req.reviewer_notes}
+                      </p>
                     )}
                   </div>
                   <Badge className={STATUS_COLOR[req.status] ?? "bg-muted text-muted-foreground"}>

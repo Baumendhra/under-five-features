@@ -18,19 +18,31 @@ export const Route = createFileRoute("/demo")({
 });
 
 const ROLES: { value: Role; label: string; badge: string }[] = [
-  { value: "aicte_admin",       label: "AICTE Admin",       badge: "bg-purple-100 text-purple-800" },
-  { value: "institution_admin", label: "Institution Admin",  badge: "bg-blue-100 text-blue-800"   },
-  { value: "officer",           label: "Officer",            badge: "bg-green-100 text-green-800" },
-  { value: "student",           label: "Student",            badge: "bg-amber-100 text-amber-800" },
+  { value: "aicte_admin", label: "AICTE Admin", badge: "bg-purple-100 text-purple-800" },
+  { value: "institution_admin", label: "Institution Admin", badge: "bg-blue-100 text-blue-800" },
+  { value: "officer", label: "Officer", badge: "bg-green-100 text-green-800" },
+  { value: "student", label: "Student", badge: "bg-amber-100 text-amber-800" },
 ];
 
 const NAV_ITEMS = [
-  { to: "/demo/dashboard",    label: "Dashboard",    roles: ["aicte_admin", "institution_admin", "officer", "student"] },
-  { to: "/demo/students",     label: "Students",     roles: ["aicte_admin", "institution_admin", "officer", "student"] },
-  { to: "/demo/import",       label: "Import",       roles: ["aicte_admin", "institution_admin", "officer"] },
+  {
+    to: "/demo/dashboard",
+    label: "Dashboard",
+    roles: ["aicte_admin", "institution_admin", "officer", "student"],
+  },
+  {
+    to: "/demo/students",
+    label: "Students",
+    roles: ["aicte_admin", "institution_admin", "officer", "student"],
+  },
+  { to: "/demo/import", label: "Import", roles: ["aicte_admin", "institution_admin", "officer"] },
   { to: "/demo/institutions", label: "Institutions", roles: ["aicte_admin"] },
-  { to: "/demo/duplicates",   label: "Duplicates",   roles: ["aicte_admin", "institution_admin", "officer"] },
-  { to: "/demo/audit",        label: "Audit",        roles: ["aicte_admin", "institution_admin", "officer"] },
+  {
+    to: "/demo/duplicates",
+    label: "Duplicates",
+    roles: ["aicte_admin", "institution_admin", "officer"],
+  },
+  { to: "/demo/audit", label: "Audit", roles: ["aicte_admin", "institution_admin", "officer"] },
 ] as const;
 
 function DemoLayout() {
@@ -40,7 +52,9 @@ function DemoLayout() {
   const badge = ROLES.find((r) => r.value === currentRole);
 
   // Filter nav items based on current role so the sidebar also reacts to role changes.
-  const visibleNav = NAV_ITEMS.filter((item) => (item.roles as readonly string[]).includes(currentRole));
+  const visibleNav = NAV_ITEMS.filter((item) =>
+    (item.roles as readonly string[]).includes(currentRole),
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,7 +73,12 @@ function DemoLayout() {
           {/* Right: role switcher + back link */}
           <div className="flex items-center gap-3">
             {/* Current role badge */}
-            <span className={cn("hidden rounded-full px-2.5 py-0.5 text-[11px] font-medium sm:inline", badge?.badge ?? "bg-muted text-muted-foreground")}>
+            <span
+              className={cn(
+                "hidden rounded-full px-2.5 py-0.5 text-[11px] font-medium sm:inline",
+                badge?.badge ?? "bg-muted text-muted-foreground",
+              )}
+            >
               {badge?.label ?? currentRole}
             </span>
 
@@ -120,13 +139,17 @@ function DemoLayout() {
 
       {/* ── Role-change info toast ─────────────────────────────────── */}
       <div className="mx-auto max-w-7xl px-6 pt-3">
-        <div className={cn(
-          "flex items-center gap-2 rounded-lg px-3 py-2 text-xs",
-          badge?.badge ?? "bg-muted text-muted-foreground",
-          "bg-opacity-60",
-        )}>
+        <div
+          className={cn(
+            "flex items-center gap-2 rounded-lg px-3 py-2 text-xs",
+            badge?.badge ?? "bg-muted text-muted-foreground",
+            "bg-opacity-60",
+          )}
+        >
           <span className="font-semibold">Viewing as: {badge?.label ?? currentRole}</span>
-          <span className="text-[10px] opacity-70">— navigation and permissions update in real time as you switch roles</span>
+          <span className="text-[10px] opacity-70">
+            — navigation and permissions update in real time as you switch roles
+          </span>
         </div>
       </div>
 

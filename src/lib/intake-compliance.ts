@@ -3,7 +3,7 @@
 
 export type IntakeSummary = {
   programmeCode: string;
-  programmeName?: string;
+  programmeName?: string | undefined;
   intakeApproved: number;
   intakeNri: number;
   intakeSupernumerary: number;
@@ -13,7 +13,7 @@ export type IntakeSummary = {
   enrolledManagement: number;
   enrolledLateral: number;
   totalEnrolled: number;
-  regularOverflow: number;   // > 0 means over-subscribed
+  regularOverflow: number; // > 0 means over-subscribed
   nriOverflow: number;
   supernumeraryOverflow: number;
   complianceStatus: "compliant" | "warning" | "over_limit";
@@ -27,11 +27,20 @@ export type EnrollmentRecord = {
 
 export type ProgrammeConfig = {
   courseCode: string;
-  courseName?: string;
+  courseName?: string | undefined;
   intakeApproved: number;
   intakeNri: number;
   intakeSupernumerary: number;
 };
+
+interface ProgrammeEnrollmentCounts {
+  regular: number;
+  nri: number;
+  oci: number;
+  management: number;
+  lateral: number;
+  [key: string]: number;
+}
 
 /**
  * Compute intake compliance for each programme.
@@ -46,11 +55,15 @@ export function checkIntakeCompliance(
   for (const p of programmes) programmeMap.set(p.courseCode, p);
 
   // Aggregate enrollment counts by programme code and type
-  const counts = new Map<string, Record<string, number>>();
+  const counts = new Map<string, ProgrammeEnrollmentCounts>();
   for (const e of enrollments) {
     if (!counts.has(e.programmeCode)) {
       counts.set(e.programmeCode, {
-        regular: 0, nri: 0, oci: 0, management: 0, lateral: 0,
+        regular: 0,
+        nri: 0,
+        oci: 0,
+        management: 0,
+        lateral: 0,
       });
     }
     const bucket = counts.get(e.programmeCode)!;
@@ -73,12 +86,16 @@ export function checkIntakeCompliance(
 
     const regularOverflow = Math.max(0, enrolledRegular - cfg.intakeApproved);
     const nriOverflow = Math.max(0, enrolledNri - cfg.intakeNri);
-    const supernumeraryOverflow = Math.max(0, totalSupernumerary - (cfg.intakeNri + cfg.intakeSupernumerary));
+    const supernumeraryOverflow = Math.max(
+      0,
+      totalSupernumerary - (cfg.intakeNri + cfg.intakeSupernumerary),
+    );
 
     const flags: string[] = [];
     if (regularOverflow > 0) flags.push(`Regular seats over by ${regularOverflow}`);
     if (nriOverflow > 0) flags.push(`NRI seats over by ${nriOverflow}`);
-    if (supernumeraryOverflow > 0) flags.push(`Supernumerary pool exceeded by ${supernumeraryOverflow}`);
+    if (supernumeraryOverflow > 0)
+      flags.push(`Supernumerary pool exceeded by ${supernumeraryOverflow}`);
     if (totalEnrolled === 0) flags.push("No enrollments yet");
     if (totalEnrolled > 0 && totalEnrolled < cfg.intakeApproved * 0.6) {
       flags.push("Enrollment below 60% of approved intake");

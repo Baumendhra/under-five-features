@@ -22,9 +22,7 @@ export function requireRole(
   action = "perform this action",
 ): void {
   if (!(allowed as string[]).includes(actualRole)) {
-    throw new Error(
-      `Forbidden: role '${actualRole}' is not allowed to ${action}.`,
-    );
+    throw new Error(`Forbidden: role '${actualRole}' is not allowed to ${action}.`);
   }
 }
 
@@ -73,11 +71,7 @@ export function applyStudentScope<T>(
  * Students cannot export anything; officers/admins can export their scope.
  */
 export function requireExportPermission(role: string): void {
-  requireRole(
-    role,
-    ["aicte_admin", "institution_admin", "officer"],
-    "export student records",
-  );
+  requireRole(role, ["aicte_admin", "institution_admin", "officer"], "export student records");
 }
 
 /**
@@ -100,16 +94,9 @@ export function requireImportPermission(role: string): void {
  * Guard for duplicate case resolution.
  * Officers can recommend; institution_admin and above can finalise.
  */
-export function requireDuplicateResolvePermission(
-  role: string,
-  finalise: boolean,
-): void {
+export function requireDuplicateResolvePermission(role: string, finalise: boolean): void {
   if (finalise) {
-    requireRole(
-      role,
-      ["aicte_admin", "institution_admin"],
-      "finalise duplicate resolution",
-    );
+    requireRole(role, ["aicte_admin", "institution_admin"], "finalise duplicate resolution");
   } else {
     requireStaff(role);
   }
@@ -120,22 +107,14 @@ export function requireDuplicateResolvePermission(
  * Students have no access to audit logs.
  */
 export function requireAuditAccess(role: string): void {
-  requireRole(
-    role,
-    ["aicte_admin", "institution_admin", "officer"],
-    "view audit logs",
-  );
+  requireRole(role, ["aicte_admin", "institution_admin", "officer"], "view audit logs");
 }
 
 /**
  * Guard ensuring a student can only access their own record.
  * For staff, always passes.
  */
-export function requireOwnerOrStaff(
-  role: string,
-  userId: string,
-  recordUserId: string,
-): void {
+export function requireOwnerOrStaff(role: string, userId: string, recordUserId: string): void {
   if ((STAFF_ROLES as string[]).includes(role)) return;
   if (userId !== recordUserId) {
     throw new Error("Forbidden: students may only access their own record.");

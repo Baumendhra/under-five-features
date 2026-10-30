@@ -42,7 +42,9 @@ describe("requireRole", () => {
   });
 
   it("includes the action name in the error message", () => {
-    expect(() => requireRole("student", ["aicte_admin"], "delete students")).toThrow(/delete students/);
+    expect(() => requireRole("student", ["aicte_admin"], "delete students")).toThrow(
+      /delete students/,
+    );
   });
 });
 
@@ -53,41 +55,29 @@ describe("requireAicteAdmin", () => {
     expect(() => requireAicteAdmin("aicte_admin")).not.toThrow();
   });
 
-  it.each(["institution_admin", "officer", "student"] as EduRole[])(
-    "blocks %s",
-    (role) => {
-      expect(() => requireAicteAdmin(role)).toThrow(/Forbidden/);
-    },
-  );
+  it.each(["institution_admin", "officer", "student"] as EduRole[])("blocks %s", (role) => {
+    expect(() => requireAicteAdmin(role)).toThrow(/Forbidden/);
+  });
 });
 
 // ── requireInstAdmin ──────────────────────────────────────────────────────
 
 describe("requireInstAdmin", () => {
-  it.each(["aicte_admin", "institution_admin"] as EduRole[])(
-    "allows %s",
-    (role) => {
-      expect(() => requireInstAdmin(role)).not.toThrow();
-    },
-  );
+  it.each(["aicte_admin", "institution_admin"] as EduRole[])("allows %s", (role) => {
+    expect(() => requireInstAdmin(role)).not.toThrow();
+  });
 
-  it.each(["officer", "student"] as EduRole[])(
-    "blocks %s",
-    (role) => {
-      expect(() => requireInstAdmin(role)).toThrow(/Forbidden/);
-    },
-  );
+  it.each(["officer", "student"] as EduRole[])("blocks %s", (role) => {
+    expect(() => requireInstAdmin(role)).toThrow(/Forbidden/);
+  });
 });
 
 // ── requireStaff ──────────────────────────────────────────────────────────
 
 describe("requireStaff", () => {
-  it.each(["aicte_admin", "institution_admin", "officer"] as EduRole[])(
-    "allows %s",
-    (role) => {
-      expect(() => requireStaff(role)).not.toThrow();
-    },
-  );
+  it.each(["aicte_admin", "institution_admin", "officer"] as EduRole[])("allows %s", (role) => {
+    expect(() => requireStaff(role)).not.toThrow();
+  });
 
   it("blocks student", () => {
     expect(() => requireStaff("student")).toThrow(/Forbidden/);
@@ -156,12 +146,9 @@ describe("requireDuplicateResolvePermission", () => {
   });
 
   describe("finalise (resolve/dismiss)", () => {
-    it.each(["aicte_admin", "institution_admin"] as EduRole[])(
-      "allows %s to finalise",
-      (role) => {
-        expect(() => requireDuplicateResolvePermission(role, true)).not.toThrow();
-      },
-    );
+    it.each(["aicte_admin", "institution_admin"] as EduRole[])("allows %s to finalise", (role) => {
+      expect(() => requireDuplicateResolvePermission(role, true)).not.toThrow();
+    });
 
     it("blocks officer from finalising", () => {
       expect(() => requireDuplicateResolvePermission("officer", true)).toThrow(/Forbidden/);

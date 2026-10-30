@@ -31,16 +31,24 @@ export const Route = createFileRoute("/_authenticated")({
 type NavItem = { to: string; label: string; roles: Role[] | "all" };
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/dashboard",    label: "Dashboard",    roles: "all" },
-  { to: "/students",     label: "Students",     roles: ["aicte_admin", "institution_admin", "officer"] },
-  { to: "/profile",      label: "My Profile",   roles: ["student"] },
-  { to: "/import",       label: "Import",       roles: ["aicte_admin", "institution_admin", "officer"] },
+  { to: "/dashboard", label: "Dashboard", roles: "all" },
+  { to: "/students", label: "Students", roles: ["aicte_admin", "institution_admin", "officer"] },
+  { to: "/profile", label: "My Profile", roles: ["student"] },
+  { to: "/import", label: "Import", roles: ["aicte_admin", "institution_admin", "officer"] },
   { to: "/institutions", label: "Institutions", roles: ["aicte_admin"] },
-  { to: "/programmes",   label: "Programmes",   roles: ["aicte_admin", "institution_admin"] },
-  { to: "/duplicates",   label: "Duplicates",   roles: ["aicte_admin", "institution_admin", "officer"] },
-  { to: "/corrections",  label: "Corrections",  roles: ["aicte_admin", "institution_admin", "officer"] },
-  { to: "/audit",        label: "Audit",        roles: ["aicte_admin", "institution_admin", "officer"] },
-  { to: "/demo/dashboard", label: "🧪 Demo",   roles: "all" },
+  { to: "/programmes", label: "Programmes", roles: ["aicte_admin", "institution_admin"] },
+  {
+    to: "/duplicates",
+    label: "Duplicates",
+    roles: ["aicte_admin", "institution_admin", "officer"],
+  },
+  {
+    to: "/corrections",
+    label: "Corrections",
+    roles: ["aicte_admin", "institution_admin", "officer"],
+  },
+  { to: "/audit", label: "Audit", roles: ["aicte_admin", "institution_admin", "officer"] },
+  { to: "/demo/dashboard", label: "🧪 Demo", roles: "all" },
 ];
 
 function NotificationBell() {
@@ -75,10 +83,7 @@ function NotificationBell() {
       {open && (
         <>
           {/* backdrop */}
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setOpen(false)}
-          />
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-9 z-20 w-80 rounded-xl border border-border bg-card shadow-lg">
             <div className="border-b border-border px-4 py-3">
               <p className="text-sm font-semibold text-foreground">Notifications</p>
@@ -137,9 +142,7 @@ function AuthenticatedLayout() {
   const { data: profile } = useQuery(userProfileQueryOptions);
 
   const role: Role = (profile?.role ?? "officer") as Role;
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => item.roles === "all" || item.roles.includes(role),
-  );
+  const visibleNav = NAV_ITEMS.filter((item) => item.roles === "all" || item.roles.includes(role));
 
   async function handleSignOut() {
     await queryClient.cancelQueries();

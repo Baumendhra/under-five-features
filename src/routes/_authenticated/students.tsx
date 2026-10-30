@@ -37,31 +37,49 @@ export const Route = createFileRoute("/_authenticated/students")({
 
 function ApaarBadge({ student }: { student: StudentRecord }) {
   const local = apaarStatus(student.apaar_id);
-  const serverStatus = (student as unknown as Record<string, unknown>).apaar_verify_status as string | undefined;
+  const serverStatus = student.apaar_verify_status ?? undefined;
 
   if (local === "missing") {
-    return <Badge variant="outline" className="text-muted-foreground">No APAAR</Badge>;
+    return (
+      <Badge variant="outline" className="text-muted-foreground">
+        No APAAR
+      </Badge>
+    );
   }
   if (local === "invalid") {
     return <Badge variant="destructive">Bad APAAR</Badge>;
   }
   // 12-digit — show server verification status
   if (serverStatus === "verified") {
-    return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">✓ Verified</Badge>;
+    return (
+      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+        ✓ Verified
+      </Badge>
+    );
   }
   if (serverStatus === "not_found") {
-    return <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Not found</Badge>;
+    return (
+      <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+        Not found
+      </Badge>
+    );
   }
   if (serverStatus === "failed") {
     return <Badge variant="destructive">Failed</Badge>;
   }
-  return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">⏳ Pending</Badge>;
+  return (
+    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+      ⏳ Pending
+    </Badge>
+  );
 }
 
 function StudentsPage() {
   const { data: students } = useSuspenseQuery(studentsQueryOptions);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "missing" | "invalid" | "pending" | "verified">("all");
+  const [filter, setFilter] = useState<"all" | "missing" | "invalid" | "pending" | "verified">(
+    "all",
+  );
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const queryClient = useQueryClient();
@@ -71,16 +89,20 @@ function StudentsPage() {
 
   const filtered = students.filter((s) => {
     const q = search.trim().toLowerCase();
-    const matchesSearch = !q || [s.name, s.student_id, s.apaar_id, s.programme_code, s.contact]
-      .some((f) => f?.toLowerCase().includes(q));
+    const matchesSearch =
+      !q ||
+      [s.name, s.student_id, s.apaar_id, s.programme_code, s.contact].some((f) =>
+        f?.toLowerCase().includes(q),
+      );
 
     if (!matchesSearch) return false;
     const local = apaarStatus(s.apaar_id);
-    const serverStatus = (s as unknown as Record<string, unknown>).apaar_verify_status as string | undefined;
+    const serverStatus = s.apaar_verify_status ?? undefined;
 
     if (filter === "missing") return local === "missing";
     if (filter === "invalid") return local === "invalid";
-    if (filter === "pending") return local === "verified" && (!serverStatus || serverStatus === "pending");
+    if (filter === "pending")
+      return local === "verified" && (!serverStatus || serverStatus === "pending");
     if (filter === "verified") return serverStatus === "verified";
     return true;
   });
@@ -134,10 +156,10 @@ function StudentsPage() {
     invalid: students.filter((s) => apaarStatus(s.apaar_id) === "invalid").length,
     pending: students.filter((s) => {
       const local = apaarStatus(s.apaar_id);
-      const ss = (s as unknown as Record<string, unknown>).apaar_verify_status as string | undefined;
+      const ss = s.apaar_verify_status;
       return local === "verified" && (!ss || ss === "pending");
     }).length,
-    verified: students.filter((s) => (s as unknown as Record<string, unknown>).apaar_verify_status === "verified").length,
+    verified: students.filter((s) => s.apaar_verify_status === "verified").length,
   };
 
   const FILTERS = [
@@ -154,7 +176,8 @@ function StudentsPage() {
         <div>
           <h1 className="font-display text-3xl tracking-tight text-foreground">Students</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {students.length.toLocaleString()} record{students.length !== 1 ? "s" : ""} · showing {filtered.length.toLocaleString()}
+            {students.length.toLocaleString()} record{students.length !== 1 ? "s" : ""} · showing{" "}
+            {filtered.length.toLocaleString()}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -217,7 +240,9 @@ function StudentsPage() {
 
       {students.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
-          <p className="text-sm text-muted-foreground">No students yet. Import your first CSV to build the registry.</p>
+          <p className="text-sm text-muted-foreground">
+            No students yet. Import your first CSV to build the registry.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
@@ -238,21 +263,31 @@ function StudentsPage() {
             <TableBody>
               {filtered.map((student) => {
                 const local = apaarStatus(student.apaar_id);
-                const serverStatus = (student as unknown as Record<string, unknown>).apaar_verify_status as string | undefined;
-                const canVerify = local === "verified" && (!serverStatus || serverStatus === "pending");
+                const serverStatus = student.apaar_verify_status ?? undefined;
+                const canVerify =
+                  local === "verified" && (!serverStatus || serverStatus === "pending");
                 return (
-                  <TableRow key={student.id} className={cn(
-                    local === "missing" && "bg-amber-50/50 dark:bg-amber-900/10",
-                    local === "invalid" && "bg-red-50/50 dark:bg-red-900/10",
-                  )}>
-                    <TableCell className="whitespace-nowrap font-mono text-xs">{student.student_id ?? "—"}</TableCell>
+                  <TableRow
+                    key={student.id}
+                    className={cn(
+                      local === "missing" && "bg-amber-50/50 dark:bg-amber-900/10",
+                      local === "invalid" && "bg-red-50/50 dark:bg-red-900/10",
+                    )}
+                  >
+                    <TableCell className="whitespace-nowrap font-mono text-xs">
+                      {student.student_id ?? "—"}
+                    </TableCell>
                     <TableCell className="font-medium">{student.name}</TableCell>
-                    <TableCell><ApaarBadge student={student} /></TableCell>
+                    <TableCell>
+                      <ApaarBadge student={student} />
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">{student.dob ?? "—"}</TableCell>
                     <TableCell>{student.programme_code ?? "—"}</TableCell>
                     <TableCell>{student.category ?? "—"}</TableCell>
                     <TableCell>{student.intake_type ?? "—"}</TableCell>
-                    <TableCell className="max-w-40 truncate text-xs">{student.contact ?? "—"}</TableCell>
+                    <TableCell className="max-w-40 truncate text-xs">
+                      {student.contact ?? "—"}
+                    </TableCell>
                     <TableCell>
                       {canVerify && (
                         <Button

@@ -44,7 +44,10 @@ export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
       { title: "My Profile — EduTrace" },
-      { name: "description", content: "Your personal student profile and APAAR verification status." },
+      {
+        name: "description",
+        content: "Your personal student profile and APAAR verification status.",
+      },
     ],
   }),
   beforeLoad: async ({ context }) => {
@@ -70,7 +73,13 @@ const STATUS_COLOR: Record<string, string> = {
   rejected: "bg-red-100 text-red-800",
 };
 
-function CorrectionRequestForm({ student, onClose }: { student: StudentRecord; onClose: () => void }) {
+function CorrectionRequestForm({
+  student,
+  onClose,
+}: {
+  student: StudentRecord;
+  onClose: () => void;
+}) {
   const queryClient = useQueryClient();
   const submitFn = useServerFn(submitCorrectionRequest);
   const [field, setField] = useState("");
@@ -78,7 +87,7 @@ function CorrectionRequestForm({ student, onClose }: { student: StudentRecord; o
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const currentValue = field ? (student as any)[field] as string | null : null;
+  const currentValue = field ? ((student as any)[field] as string | null) : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,33 +119,64 @@ function CorrectionRequestForm({ student, onClose }: { student: StudentRecord; o
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4">
       <div>
-        <label className="mb-1 block text-sm font-medium text-foreground">Field to correct <span className="text-destructive">*</span></label>
+        <label className="mb-1 block text-sm font-medium text-foreground">
+          Field to correct <span className="text-destructive">*</span>
+        </label>
         <Select value={field} onValueChange={setField}>
-          <SelectTrigger id="correction-field"><SelectValue placeholder="Select a field" /></SelectTrigger>
+          <SelectTrigger id="correction-field">
+            <SelectValue placeholder="Select a field" />
+          </SelectTrigger>
           <SelectContent>
             {CORRECTABLE_FIELDS.map((f) => (
-              <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+              <SelectItem key={f.value} value={f.value}>
+                {f.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
       {field && (
         <div>
-          <label className="mb-1 block text-sm font-medium text-muted-foreground">Current value</label>
-          <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">{currentValue ?? "—"}</p>
+          <label className="mb-1 block text-sm font-medium text-muted-foreground">
+            Current value
+          </label>
+          <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+            {currentValue ?? "—"}
+          </p>
         </div>
       )}
       <div>
-        <label className="mb-1 block text-sm font-medium text-foreground">Correct value <span className="text-destructive">*</span></label>
-        <Input id="correction-proposed" value={proposedValue} onChange={(e) => setProposedValue(e.target.value)} placeholder="What should the correct value be?" required />
+        <label className="mb-1 block text-sm font-medium text-foreground">
+          Correct value <span className="text-destructive">*</span>
+        </label>
+        <Input
+          id="correction-proposed"
+          value={proposedValue}
+          onChange={(e) => setProposedValue(e.target.value)}
+          placeholder="What should the correct value be?"
+          required
+        />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-foreground">Reason <span className="text-destructive">*</span></label>
-        <Textarea id="correction-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is a correction needed?" rows={3} required />
+        <label className="mb-1 block text-sm font-medium text-foreground">
+          Reason <span className="text-destructive">*</span>
+        </label>
+        <Textarea
+          id="correction-reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Why is a correction needed?"
+          rows={3}
+          required
+        />
       </div>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
-        <Button type="submit" disabled={submitting}>{submitting ? "Submitting…" : "Submit request"}</Button>
+        <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "Submitting…" : "Submit request"}
+        </Button>
       </div>
     </form>
   );
@@ -161,7 +201,8 @@ function StudentProfilePage() {
         <p className="text-4xl">📋</p>
         <h1 className="mt-4 font-display text-2xl text-foreground">No record found</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your student record has not been linked to this account yet. Please contact your institution.
+          Your student record has not been linked to this account yet. Please contact your
+          institution.
         </p>
       </div>
     );
@@ -182,10 +223,14 @@ function StudentProfilePage() {
         </div>
         <Dialog open={correctionOpen} onOpenChange={setCorrectionOpen}>
           <DialogTrigger asChild>
-            <Button id="btn-submit-correction" variant="outline">Request a correction</Button>
+            <Button id="btn-submit-correction" variant="outline">
+              Request a correction
+            </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Submit Correction Request</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Submit Correction Request</DialogTitle>
+            </DialogHeader>
             <CorrectionRequestForm student={myRecord} onClose={() => setCorrectionOpen(false)} />
           </DialogContent>
         </Dialog>
@@ -222,24 +267,53 @@ function StudentProfilePage() {
             <p className="text-xs font-medium text-muted-foreground">APAAR ID</p>
             {/* Mask APAAR for the student view */}
             <p className="mt-0.5 font-mono text-sm text-foreground">
-              {myRecord.apaar_id ? `${myRecord.apaar_id.slice(0, 4)}••••${myRecord.apaar_id.slice(-4)}` : "Not provided"}
+              {myRecord.apaar_id
+                ? `${myRecord.apaar_id.slice(0, 4)}••••${myRecord.apaar_id.slice(-4)}`
+                : "Not provided"}
             </p>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Format check</p>
-            <Badge className={apaar === "verified" ? "bg-green-100 text-green-800" : apaar === "missing" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}>
-              {apaar === "verified" ? "✓ Valid format (12 digits)" : apaar === "missing" ? "Not provided" : "Invalid format"}
+            <Badge
+              className={
+                apaar === "verified"
+                  ? "bg-green-100 text-green-800"
+                  : apaar === "missing"
+                    ? "bg-amber-100 text-amber-800"
+                    : "bg-red-100 text-red-800"
+              }
+            >
+              {apaar === "verified"
+                ? "✓ Valid format (12 digits)"
+                : apaar === "missing"
+                  ? "Not provided"
+                  : "Invalid format"}
             </Badge>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Verification status</p>
-            <Badge className={verifyStatus === "verified" ? "bg-green-100 text-green-800" : verifyStatus === "not_found" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}>
-              {verifyStatus === "verified" ? "✓ Verified" : verifyStatus === "not_found" ? "Not found in APAAR registry" : verifyStatus === "failed" ? "Verification failed" : "⏳ Pending verification"}
+            <Badge
+              className={
+                verifyStatus === "verified"
+                  ? "bg-green-100 text-green-800"
+                  : verifyStatus === "not_found"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-amber-100 text-amber-800"
+              }
+            >
+              {verifyStatus === "verified"
+                ? "✓ Verified"
+                : verifyStatus === "not_found"
+                  ? "Not found in APAAR registry"
+                  : verifyStatus === "failed"
+                    ? "Verification failed"
+                    : "⏳ Pending verification"}
             </Badge>
           </div>
           {(myRecord as any).apaar_verified_at && (
             <p className="text-xs text-muted-foreground">
-              Verified on {new Date((myRecord as any).apaar_verified_at).toLocaleDateString("en-IN")}
+              Verified on{" "}
+              {new Date((myRecord as any).apaar_verified_at).toLocaleDateString("en-IN")}
             </p>
           )}
         </div>

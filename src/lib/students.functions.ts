@@ -1,11 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { queryOptions } from "@tanstack/react-query";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  requireStaff,
-  requireImportPermission,
-  applyStudentScope,
-} from "@/lib/rbac";
+import { requireStaff, requireImportPermission, applyStudentScope } from "@/lib/rbac";
 
 // Re-export for convenience
 export { getDashboardStats, dashboardStatsQueryOptions } from "@/lib/edutrace.functions";
@@ -77,10 +73,7 @@ export const getStudentById = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { studentId: string }) => input)
   .handler(async ({ data, context }) => {
-    let query = context.supabase
-      .from("students")
-      .select("*")
-      .eq("id", data.studentId);
+    let query = context.supabase.from("students").select("*").eq("id", data.studentId);
 
     // Students can only see their own record
     if (context.role === "student") {
@@ -105,7 +98,7 @@ export const insertStudents = createServerFn({ method: "POST" })
 
     const rows = data.rows.slice(0, 5000).map((row) => ({
       user_id: context.userId,
-      institution_id: context.institutionId,  // ← always stamped server-side
+      institution_id: context.institutionId, // ← always stamped server-side
       student_id: row.studentId,
       apaar_id: row.apaarId,
       name: row.name,

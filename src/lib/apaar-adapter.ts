@@ -58,7 +58,7 @@ export async function verifyApaarId(apaarId: string): Promise<ApaarVerifyResult>
       status: "verified",
       message: "APAAR ID successfully verified with DigiLocker registry.",
       verified_name: "Verified Student", // In production: real name from APAAR
-      verified_dob: "2005-01-01",        // In production: real DOB from APAAR
+      verified_dob: "2005-01-01", // In production: real DOB from APAAR
     };
   }
 
@@ -78,9 +78,7 @@ export async function batchVerifyApaarIds(
 ): Promise<Map<string, ApaarVerifyResult>> {
   const results = new Map<string, ApaarVerifyResult>();
   // Process in parallel (real API might need throttling)
-  const settled = await Promise.allSettled(
-    apaarIds.slice(0, 100).map((id) => verifyApaarId(id)),
-  );
+  const settled = await Promise.allSettled(apaarIds.slice(0, 100).map((id) => verifyApaarId(id)));
   settled.forEach((r, i) => {
     const id = apaarIds[i]!;
     if (r.status === "fulfilled") {

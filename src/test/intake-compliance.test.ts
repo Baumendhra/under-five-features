@@ -60,8 +60,20 @@ describe("checkIntakeCompliance — normal scenarios", () => {
 describe("checkIntakeCompliance — multiple programmes", () => {
   it("handles multiple programmes independently", () => {
     const programmes: ProgrammeConfig[] = [
-      { courseCode: "CSE", courseName: "CSE", intakeApproved: 60, intakeNri: 5, intakeSupernumerary: 3 },
-      { courseCode: "EEE", courseName: "EEE", intakeApproved: 30, intakeNri: 3, intakeSupernumerary: 2 },
+      {
+        courseCode: "CSE",
+        courseName: "CSE",
+        intakeApproved: 60,
+        intakeNri: 5,
+        intakeSupernumerary: 3,
+      },
+      {
+        courseCode: "EEE",
+        courseName: "EEE",
+        intakeApproved: 30,
+        intakeNri: 3,
+        intakeSupernumerary: 2,
+      },
     ];
     const enrollments = [...enrollN(65, "regular", "CSE"), ...enrollN(28, "regular", "EEE")];
     const summaries = checkIntakeCompliance(enrollments, programmes);

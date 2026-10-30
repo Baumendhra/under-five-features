@@ -3,7 +3,11 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { programmesQueryOptions, institutionsQueryOptions, createProgramme } from "@/lib/edutrace.functions";
+import {
+  programmesQueryOptions,
+  institutionsQueryOptions,
+  createProgramme,
+} from "@/lib/edutrace.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -63,8 +67,9 @@ function ProgrammesPage() {
   const instMap = new Map(institutions.map((i) => [i.id, i.name]));
 
   const filtered = programmes.filter((p) =>
-    [p.course_code, p.course_name, instMap.get(p.institution_id)]
-      .some((f) => f?.toLowerCase().includes(search.toLowerCase())),
+    [p.course_code, p.course_name, instMap.get(p.institution_id)].some((f) =>
+      f?.toLowerCase().includes(search.toLowerCase()),
+    ),
   );
 
   async function handleCreate(e: React.FormEvent) {
@@ -90,9 +95,20 @@ function ProgrammesPage() {
       toast.success("Programme added.");
       await queryClient.invalidateQueries({ queryKey: ["programmes"] });
       setOpen(false);
-      setForm({ institution_id: "", course_code: "", course_name: "", year: new Date().getFullYear(), intake_approved: 60, intake_nri: 0, intake_supernumerary: 0, other_details: "" });
+      setForm({
+        institution_id: "",
+        course_code: "",
+        course_name: "",
+        year: new Date().getFullYear(),
+        intake_approved: 60,
+        intake_nri: 0,
+        intake_supernumerary: 0,
+        other_details: "",
+      });
     } catch (err) {
-      toast.error("Failed to add programme. Course code may already exist for this institution/year.");
+      toast.error(
+        "Failed to add programme. Course code may already exist for this institution/year.",
+      );
     } finally {
       setSaving(false);
     }
@@ -106,7 +122,8 @@ function ProgrammesPage() {
         <div>
           <h1 className="font-display text-3xl tracking-tight text-foreground">Programmes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {programmes.length} programme{programmes.length !== 1 ? "s" : ""} · {totalApproved.toLocaleString()} total approved seats
+            {programmes.length} programme{programmes.length !== 1 ? "s" : ""} ·{" "}
+            {totalApproved.toLocaleString()} total approved seats
           </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -133,7 +150,9 @@ function ProgrammesPage() {
                 >
                   <option value="">Select institution</option>
                   {institutions.map((i) => (
-                    <option key={i.id} value={i.id}>{i.name}</option>
+                    <option key={i.id} value={i.id}>
+                      {i.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -163,7 +182,9 @@ function ProgrammesPage() {
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">Course name</label>
+                <label className="mb-1 block text-sm font-medium text-foreground">
+                  Course name
+                </label>
                 <Input
                   id="prog-name"
                   value={form.course_name}
@@ -173,17 +194,23 @@ function ProgrammesPage() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-foreground">Approved seats</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">
+                    Approved seats
+                  </label>
                   <Input
                     id="prog-intake"
                     type="number"
                     value={form.intake_approved}
-                    onChange={(e) => setForm((f) => ({ ...f, intake_approved: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, intake_approved: Number(e.target.value) }))
+                    }
                     min={0}
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-foreground">NRI seats</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">
+                    NRI seats
+                  </label>
                   <Input
                     id="prog-nri"
                     type="number"
@@ -193,18 +220,24 @@ function ProgrammesPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-foreground">Supernumerary</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">
+                    Supernumerary
+                  </label>
                   <Input
                     id="prog-supernumerary"
                     type="number"
                     value={form.intake_supernumerary}
-                    onChange={(e) => setForm((f) => ({ ...f, intake_supernumerary: Number(e.target.value) }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, intake_supernumerary: Number(e.target.value) }))
+                    }
                     min={0}
                   />
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                  Cancel
+                </Button>
                 <Button type="submit" disabled={saving}>
                   {saving ? "Adding…" : "Add programme"}
                 </Button>
@@ -226,7 +259,9 @@ function ProgrammesPage() {
         <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
           <p className="text-4xl">📚</p>
           <p className="mt-4 font-display text-xl text-foreground">No programmes yet</p>
-          <p className="mt-2 text-sm text-muted-foreground">Add an institution first, then define approved programmes.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Add an institution first, then define approved programmes.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
@@ -248,16 +283,28 @@ function ProgrammesPage() {
                 const total = prog.intake_approved + prog.intake_nri + prog.intake_supernumerary;
                 return (
                   <TableRow key={prog.id}>
-                    <TableCell className="font-mono text-sm font-medium">{prog.course_code}</TableCell>
+                    <TableCell className="font-mono text-sm font-medium">
+                      {prog.course_code}
+                    </TableCell>
                     <TableCell className="text-sm">{prog.course_name ?? "—"}</TableCell>
-                    <TableCell className="text-sm">{instMap.get(prog.institution_id) ?? prog.institution_id}</TableCell>
+                    <TableCell className="text-sm">
+                      {instMap.get(prog.institution_id) ?? prog.institution_id}
+                    </TableCell>
                     <TableCell>{prog.year}</TableCell>
                     <TableCell className="text-right">{prog.intake_approved}</TableCell>
                     <TableCell className="text-right">
-                      {prog.intake_nri > 0 ? <Badge variant="outline">{prog.intake_nri}</Badge> : "—"}
+                      {prog.intake_nri > 0 ? (
+                        <Badge variant="outline">{prog.intake_nri}</Badge>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {prog.intake_supernumerary > 0 ? <Badge variant="secondary">{prog.intake_supernumerary}</Badge> : "—"}
+                      {prog.intake_supernumerary > 0 ? (
+                        <Badge variant="secondary">{prog.intake_supernumerary}</Badge>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-medium">{total}</TableCell>
                   </TableRow>

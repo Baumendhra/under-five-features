@@ -15,6 +15,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { queryOptions } from "@tanstack/react-query";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireStaff } from "@/lib/rbac";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 export type CorrectionRequest = {
   id: string;
@@ -125,9 +126,7 @@ export const listPendingCorrectionRequests = createServerFn({ method: "GET" })
     // Build join query: correction_requests → students (to scope by institution)
     let query = context.supabase
       .from("correction_requests")
-      .select(
-        "*, students!inner(name, institution_id, user_id)",
-      )
+      .select("*, students!inner(name, institution_id, user_id)")
       .order("created_at", { ascending: false });
 
     if (context.role !== "aicte_admin" && context.institutionId) {
@@ -136,7 +135,9 @@ export const listPendingCorrectionRequests = createServerFn({ method: "GET" })
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-    return (data ?? []) as (CorrectionRequest & { students: { name: string; institution_id: string; user_id: string } })[];
+    return (data ?? []) as (CorrectionRequest & {
+      students: { name: string; institution_id: string; user_id: string };
+    })[];
   });
 
 export const pendingCorrectionRequestsQueryOptions = queryOptions({
@@ -152,7 +153,7 @@ export const reviewCorrectionRequest = createServerFn({ method: "POST" })
     (input: {
       requestId: string;
       decision: "approved" | "rejected";
-      reviewerNotes?: string;
+      reviewerNotes?: string | undefined;
     }) => input,
   )
   .handler(async ({ data, context }) => {
@@ -187,7 +188,7 @@ export const reviewCorrectionRequest = createServerFn({ method: "POST" })
 
     // If approved, apply the field change to the actual student record
     if (data.decision === "approved") {
-      const fieldMap: Record<string, string> = {
+      const fieldMap: Record<string, keyof TablesUpdate<"students">> = {
         name: "name",
         dob: "dob",
         programme_code: "programme_code",
@@ -197,11 +198,13 @@ export const reviewCorrectionRequest = createServerFn({ method: "POST" })
         gender: "gender",
       };
       const dbField = fieldMap[req.field_name];
-      if (!dbField) throw new Error(`Field '${req.field_name}' cannot be corrected via this workflow.`);
+      if (!dbField)
+        throw new Error(`Field '${req.field_name}' cannot be corrected via this workflow.`);
 
+      const updatePayload: Record<string, string> = { [dbField]: req.proposed_value };
       const { error: studentErr } = await context.supabase
         .from("students")
-        .update({ [dbField]: req.proposed_value })
+        .update(updatePayload as TablesUpdate<"students">)
         .eq("id", req.student_id);
       if (studentErr) throw new Error(studentErr.message);
     }
@@ -215,7 +218,7 @@ export const reviewCorrectionRequest = createServerFn({ method: "POST" })
         student_id: req.student_id,
         field_name: req.field_name,
         decision: data.decision,
-        reviewer_notes: data.reviewerNotes,
+        reviewer_notes: data.reviewerNotes ?? null,
         role: context.role,
       },
     });

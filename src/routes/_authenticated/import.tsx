@@ -75,7 +75,8 @@ function ImportPage() {
   }
 
   function toggle(rowNumber: number, status: ReviewedStudent["status"]) {
-    if (status === "duplicate_db" || status === "duplicate_file" || status === "missing_name") return;
+    if (status === "duplicate_db" || status === "duplicate_file" || status === "missing_name")
+      return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(rowNumber)) next.delete(rowNumber);
@@ -89,7 +90,8 @@ function ImportPage() {
     return {
       total: rows.length,
       ready: rows.filter((r) => r.status === "valid").length,
-      flagged: rows.filter((r) => r.status === "missing_apaar" || r.status === "invalid_apaar").length,
+      flagged: rows.filter((r) => r.status === "missing_apaar" || r.status === "invalid_apaar")
+        .length,
       duplicates: rows.filter((r) => r.status.startsWith("duplicate")).length,
       skipped: rows.filter((r) => r.status === "missing_name").length,
     };
@@ -107,7 +109,9 @@ function ImportPage() {
     setImporting(true);
     try {
       const result = await importFn({ data: { rows } });
-      toast.success(`${result.inserted.toLocaleString()} student${result.inserted === 1 ? "" : "s"} saved.`);
+      toast.success(
+        `${result.inserted.toLocaleString()} student${result.inserted === 1 ? "" : "s"} saved.`,
+      );
       await queryClient.invalidateQueries({ queryKey: ["students"] });
       void navigate({ to: "/students" });
     } catch {
@@ -213,7 +217,10 @@ function ImportPage() {
           </TableHeader>
           <TableBody>
             {reviewed.map((student) => {
-              const locked = student.status === "duplicate_db" || student.status === "duplicate_file" || student.status === "missing_name";
+              const locked =
+                student.status === "duplicate_db" ||
+                student.status === "duplicate_file" ||
+                student.status === "missing_name";
               const checked = selected.has(student.rowNumber);
               const flagged = student.status !== "valid" && !locked;
               return (
@@ -226,7 +233,9 @@ function ImportPage() {
                       aria-label={`Import row ${student.rowNumber}`}
                     />
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{student.rowNumber}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {student.rowNumber}
+                  </TableCell>
                   <TableCell className="whitespace-nowrap font-mono text-xs">
                     {student.studentId ?? "—"}
                   </TableCell>

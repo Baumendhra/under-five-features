@@ -45,8 +45,9 @@ function InstitutionsPage() {
   });
 
   const filtered = institutions.filter((i) =>
-    [i.name, i.aicte_id, i.region, i.affiliation]
-      .some((f) => f?.toLowerCase().includes(search.toLowerCase())),
+    [i.name, i.aicte_id, i.region, i.affiliation].some((f) =>
+      f?.toLowerCase().includes(search.toLowerCase()),
+    ),
   );
 
   async function handleCreate(e: React.FormEvent) {
@@ -70,7 +71,14 @@ function InstitutionsPage() {
       toast.success("Institution created.");
       await queryClient.invalidateQueries({ queryKey: ["institutions"] });
       setOpen(false);
-      setForm({ name: "", aicte_id: "", region: "", affiliation: "", address: "", contact_email: "" });
+      setForm({
+        name: "",
+        aicte_id: "",
+        region: "",
+        affiliation: "",
+        address: "",
+        contact_email: "",
+      });
     } catch (err) {
       toast.error("Failed to create institution. Check AICTE ID uniqueness.");
     } finally {
@@ -129,12 +137,18 @@ function InstitutionsPage() {
                     className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm"
                   >
                     <option value="">Select region</option>
-                    {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                    {REGIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">Affiliation</label>
+                <label className="mb-1 block text-sm font-medium text-foreground">
+                  Affiliation
+                </label>
                 <Input
                   id="inst-affiliation"
                   value={form.affiliation}
@@ -143,7 +157,9 @@ function InstitutionsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">Contact email</label>
+                <label className="mb-1 block text-sm font-medium text-foreground">
+                  Contact email
+                </label>
                 <Input
                   id="inst-email"
                   type="email"
@@ -153,7 +169,9 @@ function InstitutionsPage() {
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                  Cancel
+                </Button>
                 <Button type="submit" disabled={saving}>
                   {saving ? "Creating…" : "Create institution"}
                 </Button>
@@ -175,7 +193,9 @@ function InstitutionsPage() {
         <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
           <p className="text-4xl">🏫</p>
           <p className="mt-4 font-display text-xl text-foreground">No institutions yet</p>
-          <p className="mt-2 text-sm text-muted-foreground">Add the first institution to get started.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Add the first institution to get started.
+          </p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -188,11 +208,15 @@ function InstitutionsPage() {
                 <div className="min-w-0">
                   <h3 className="truncate font-semibold text-foreground">{inst.name}</h3>
                   {inst.aicte_id && (
-                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">AICTE: {inst.aicte_id}</p>
+                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                      AICTE: {inst.aicte_id}
+                    </p>
                   )}
                 </div>
                 {inst.region && (
-                  <Badge variant="secondary" className="shrink-0">{inst.region}</Badge>
+                  <Badge variant="secondary" className="shrink-0">
+                    {inst.region}
+                  </Badge>
                 )}
               </div>
               {inst.affiliation && (

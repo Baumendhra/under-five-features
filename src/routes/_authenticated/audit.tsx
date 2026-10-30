@@ -18,7 +18,10 @@ export const Route = createFileRoute("/_authenticated/audit")({
   head: () => ({
     meta: [
       { title: "Audit Log — EduTrace" },
-      { name: "description", content: "Full audit trail of all data changes and access in EduTrace." },
+      {
+        name: "description",
+        content: "Full audit trail of all data changes and access in EduTrace.",
+      },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(auditLogsQueryOptions),
@@ -38,8 +41,9 @@ function AuditPage() {
   const [search, setSearch] = useState("");
 
   const filtered = logs.filter((l) =>
-    [l.action, l.entity_type, l.entity_id, JSON.stringify(l.details)]
-      .some((f) => f?.toLowerCase().includes(search.toLowerCase())),
+    [l.action, l.entity_type, l.entity_id, JSON.stringify(l.details)].some((f) =>
+      f?.toLowerCase().includes(search.toLowerCase()),
+    ),
   );
 
   return (
@@ -62,7 +66,9 @@ function AuditPage() {
       {logs.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
           <p className="text-4xl">📋</p>
-          <p className="mt-4 text-sm text-muted-foreground">No audit entries yet. Actions will appear here.</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            No audit entries yet. Actions will appear here.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
@@ -90,7 +96,9 @@ function AuditPage() {
                       {log.action}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm capitalize">{log.entity_type.replace(/_/g, " ")}</TableCell>
+                  <TableCell className="text-sm capitalize">
+                    {log.entity_type.replace(/_/g, " ")}
+                  </TableCell>
                   <TableCell className="max-w-32 truncate font-mono text-xs text-muted-foreground">
                     {log.entity_id ? log.entity_id.slice(0, 8) + "…" : "—"}
                   </TableCell>

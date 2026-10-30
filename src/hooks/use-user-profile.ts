@@ -49,9 +49,7 @@ export interface RbacContext {
 
 export function useUserProfile(): RbacContext {
   // Detect demo mode by the current browser pathname.
-  const isDemo =
-    typeof window !== "undefined" &&
-    window.location.pathname.startsWith("/demo");
+  const isDemo = typeof window !== "undefined" && window.location.pathname.startsWith("/demo");
 
   // The demo role store is always called (hooks must not be conditional).
   // In production mode the value is simply ignored.

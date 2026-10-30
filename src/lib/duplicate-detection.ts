@@ -10,7 +10,7 @@ export type DuplicatePair = {
 };
 
 export type StudentMinimal = {
-  index: number;          // position in array
+  index: number; // position in array
   apaarId: string | null;
   name: string;
   dob: string | null;
@@ -102,7 +102,13 @@ export function detectDuplicates(students: StudentMinimal[]): DuplicatePair[] {
       const apaarA = normApaar(a.apaarId);
       const apaarB = normApaar(b.apaarId);
       if (apaarA && apaarB && apaarA === apaarB) {
-        pairs.push({ indexA: i, indexB: j, reason: "apaar_exact", score: 1, detail: `Same APAAR ID: ${apaarA}` });
+        pairs.push({
+          indexA: i,
+          indexB: j,
+          reason: "apaar_exact",
+          score: 1,
+          detail: `Same APAAR ID: ${apaarA}`,
+        });
         seen.add(key);
         continue;
       }
@@ -111,7 +117,13 @@ export function detectDuplicates(students: StudentMinimal[]): DuplicatePair[] {
       const nameA = normName(a.name);
       const nameB = normName(b.name);
       if (nameA && nameB && a.dob && b.dob && nameA === nameB && a.dob === b.dob) {
-        pairs.push({ indexA: i, indexB: j, reason: "name_dob_exact", score: 1, detail: `Same name and DOB: ${a.name}, ${a.dob}` });
+        pairs.push({
+          indexA: i,
+          indexB: j,
+          reason: "name_dob_exact",
+          score: 1,
+          detail: `Same name and DOB: ${a.name}, ${a.dob}`,
+        });
         seen.add(key);
         continue;
       }
@@ -121,7 +133,8 @@ export function detectDuplicates(students: StudentMinimal[]): DuplicatePair[] {
         const score = jaroWinkler(nameA, nameB);
         if (score >= FUZZY_THRESHOLD) {
           pairs.push({
-            indexA: i, indexB: j,
+            indexA: i,
+            indexB: j,
             reason: "fuzzy_name_dob",
             score,
             detail: `Similar names (${(score * 100).toFixed(0)}% match) with same DOB: "${a.name}" vs "${b.name}"`,

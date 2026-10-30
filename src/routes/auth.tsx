@@ -56,9 +56,7 @@ function SignInPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <h1 className="font-display text-3xl tracking-tight text-foreground">
-            EduTrace
-          </h1>
+          <h1 className="font-display text-3xl tracking-tight text-foreground">EduTrace</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Student records, verified. Sign in to open your registry.
           </p>
@@ -66,10 +64,7 @@ function SignInPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label
-              htmlFor="email"
-              className="mb-1 block text-sm font-medium text-foreground"
-            >
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-foreground">
               Email
             </label>
             <Input
@@ -85,10 +80,7 @@ function SignInPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium text-foreground"
-            >
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-foreground">
               Password
             </label>
             <Input

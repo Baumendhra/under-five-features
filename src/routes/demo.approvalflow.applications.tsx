@@ -33,7 +33,9 @@ export const Route = createFileRoute("/demo/approvalflow/applications")({
 // ─── Stage Badge ─────────────────────────────────────────────────────────────
 function StageBadge({ stage }: { stage: AppStage }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STAGE_COLORS[stage]}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STAGE_COLORS[stage]}`}
+    >
       {STAGE_LABELS[stage]}
     </span>
   );
@@ -41,43 +43,71 @@ function StageBadge({ stage }: { stage: AppStage }) {
 
 // ─── Workflow Stepper ─────────────────────────────────────────────────────────
 const FLOW_STEPS: AppStage[] = [
-  "Submitted","ScrutinyPending","DeficiencyRaised","CompliancePending",
-  "EVCPending","EVCScheduled","EVCCompleted","RecommendationPending","FinalDecision","Approved",
+  "Submitted",
+  "ScrutinyPending",
+  "DeficiencyRaised",
+  "CompliancePending",
+  "EVCPending",
+  "EVCScheduled",
+  "EVCCompleted",
+  "RecommendationPending",
+  "FinalDecision",
+  "Approved",
 ];
 function WorkflowStepper({ current }: { current: AppStage }) {
   const activeIdx = FLOW_STEPS.indexOf(current);
   return (
     <div className="flex items-center gap-0 overflow-x-auto pb-2">
-      {FLOW_STEPS.filter(s => s !== "DeficiencyRaised" && s !== "CompliancePending").map((stage, i, arr) => {
-        const stageIdx = FLOW_STEPS.indexOf(stage);
-        const done = stageIdx < activeIdx;
-        const active = stageIdx === activeIdx;
-        return (
-          <div key={stage} className="flex items-center shrink-0">
-            <div className={`flex flex-col items-center`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all
-                ${active ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200" :
-                  done   ? "bg-green-500 border-green-500 text-white" :
-                           "bg-background border-border text-muted-foreground"}`}>
-                {done ? "✓" : i + 1}
+      {FLOW_STEPS.filter((s) => s !== "DeficiencyRaised" && s !== "CompliancePending").map(
+        (stage, i, arr) => {
+          const stageIdx = FLOW_STEPS.indexOf(stage);
+          const done = stageIdx < activeIdx;
+          const active = stageIdx === activeIdx;
+          return (
+            <div key={stage} className="flex items-center shrink-0">
+              <div className={`flex flex-col items-center`}>
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all
+                ${
+                  active
+                    ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
+                    : done
+                      ? "bg-green-500 border-green-500 text-white"
+                      : "bg-background border-border text-muted-foreground"
+                }`}
+                >
+                  {done ? "✓" : i + 1}
+                </div>
+                <span
+                  className={`text-[9px] mt-1 text-center leading-tight max-w-[52px] ${active ? "font-semibold text-blue-600" : done ? "text-green-600" : "text-muted-foreground"}`}
+                >
+                  {STAGE_LABELS[stage].replace(" ", "\n")}
+                </span>
               </div>
-              <span className={`text-[9px] mt-1 text-center leading-tight max-w-[52px] ${active ? "font-semibold text-blue-600" : done ? "text-green-600" : "text-muted-foreground"}`}>
-                {STAGE_LABELS[stage].replace(" ", "\n")}
-              </span>
+              {i < arr.length - 1 && (
+                <div
+                  className={`h-0.5 w-8 mx-0.5 mb-4 rounded ${done ? "bg-green-400" : "bg-border"}`}
+                />
+              )}
             </div>
-            {i < arr.length - 1 && (
-              <div className={`h-0.5 w-8 mx-0.5 mb-4 rounded ${done ? "bg-green-400" : "bg-border"}`} />
-            )}
-          </div>
-        );
-      })}
+          );
+        },
+      )}
     </div>
   );
 }
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
-function ApplicationDetail({ app, userId, onClose, onRefresh }: {
-  app: Application; userId: string; onClose: () => void; onRefresh: () => void;
+function ApplicationDetail({
+  app,
+  userId,
+  onClose,
+  onRefresh,
+}: {
+  app: Application;
+  userId: string;
+  onClose: () => void;
+  onRefresh: () => void;
 }) {
   const inst = afStore.getInstitution(app.institutionId);
   const docs = afStore.getDocumentsForApp(app.id);
@@ -85,7 +115,7 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
   const auditLogs = afStore.getAuditLogsForApp(app.id);
   const assignedUser = app.assignedTo ? afStore.getUser(app.assignedTo) : null;
 
-  const [activeTab, setActiveTab] = useState<"overview"|"docs"|"tasks"|"audit">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "docs" | "tasks" | "audit">("overview");
   const [transitionStage, setTransitionStage] = useState<AppStage | "">("");
   const [transitionRemarks, setTransitionRemarks] = useState("");
   const [deficiencyDesc, setDeficiencyDesc] = useState("");
@@ -99,23 +129,42 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
   const allowed = STAGE_TRANSITIONS[app.currentStage] ?? [];
   const overdue = isOverdue(app);
 
-  function notify(msg: string) { setToast(msg); setTimeout(() => setToast(""), 3000); }
+  function notify(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  }
 
   function doTransition() {
     if (!transitionStage) return;
     try {
-      afStore.transitionStage(app.id, transitionStage as AppStage, userId, transitionRemarks || undefined);
+      afStore.transitionStage(
+        app.id,
+        transitionStage as AppStage,
+        userId,
+        transitionRemarks || undefined,
+      );
       notify(`✅ Moved to ${STAGE_LABELS[transitionStage as AppStage]}`);
-      setTransitionStage(""); setTransitionRemarks("");
+      setTransitionStage("");
+      setTransitionRemarks("");
       onRefresh();
-    } catch (e: unknown) { notify(`❌ ${e instanceof Error ? e.message : String(e)}`); }
+    } catch (e: unknown) {
+      notify(`❌ ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   function doRaiseDeficiency() {
     if (!deficiencyDesc || !deficiencyDue) return;
-    afStore.raiseDeficiency(app.id, deficiencyDesc, deficiencyDue, app.assignedTo ?? userId, userId);
+    afStore.raiseDeficiency(
+      app.id,
+      deficiencyDesc,
+      deficiencyDue,
+      app.assignedTo ?? userId,
+      userId,
+    );
     notify("⚠️ Deficiency raised");
-    setDeficiencyDesc(""); setDeficiencyDue(""); setShowDefForm(false);
+    setDeficiencyDesc("");
+    setDeficiencyDue("");
+    setShowDefForm(false);
     onRefresh();
   }
 
@@ -124,15 +173,24 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
     const ocrData = uploadType === "FacultyList" ? { facultyCount: "45" } : undefined;
     afStore.uploadDocument(app.id, uploadType, uploadName, userId, ocrData);
     notify("📄 Document uploaded");
-    setUploadName(""); setShowUploadForm(false);
+    setUploadName("");
+    setShowUploadForm(false);
     onRefresh();
   }
 
-  const TABS = ["overview","docs","tasks","audit"] as const;
-  const TAB_LABELS = { overview: "Overview", docs: `Documents (${docs.length})`, tasks: `Tasks (${tasks.length})`, audit: "Audit Trail" };
+  const TABS = ["overview", "docs", "tasks", "audit"] as const;
+  const TAB_LABELS = {
+    overview: "Overview",
+    docs: `Documents (${docs.length})`,
+    tasks: `Tasks (${tasks.length})`,
+    audit: "Audit Trail",
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         className="relative h-full w-full max-w-2xl overflow-y-auto bg-background shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -151,11 +209,22 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-bold text-lg text-foreground">{app.id}</span>
                 <StageBadge stage={app.currentStage} />
-                {overdue && <span className="rounded-full bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5">⚠ OVERDUE</span>}
+                {overdue && (
+                  <span className="rounded-full bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5">
+                    ⚠ OVERDUE
+                  </span>
+                )}
               </div>
-              <p className="text-sm text-muted-foreground mt-0.5">{inst?.name} · {APP_TYPE_LABELS[app.appType]}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {inst?.name} · {APP_TYPE_LABELS[app.appType]}
+              </p>
             </div>
-            <button onClick={onClose} className="rounded-full p-1.5 hover:bg-accent text-muted-foreground">✕</button>
+            <button
+              onClick={onClose}
+              className="rounded-full p-1.5 hover:bg-accent text-muted-foreground"
+            >
+              ✕
+            </button>
           </div>
           {/* Stepper */}
           <div className="mt-4 overflow-x-auto">
@@ -184,19 +253,21 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
             <>
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
-                  ["Application ID",    app.id],
-                  ["Institution",       inst?.name ?? "-"],
-                  ["AICTE ID",          inst?.aicteId ?? "-"],
-                  ["Region / State",    `${app.region} · ${inst?.state ?? "-"}`],
-                  ["App Type",          APP_TYPE_LABELS[app.appType]],
-                  ["Submitted On",      app.submittedOn],
-                  ["SLA Deadline",      app.slaDeadline],
-                  ["Days Remaining",    `${daysUntil(app.slaDeadline)}d`],
-                  ["Deficiencies",      String(app.deficiencyCount)],
-                  ["Assigned To",       assignedUser?.name ?? "Unassigned"],
+                  ["Application ID", app.id],
+                  ["Institution", inst?.name ?? "-"],
+                  ["AICTE ID", inst?.aicteId ?? "-"],
+                  ["Region / State", `${app.region} · ${inst?.state ?? "-"}`],
+                  ["App Type", APP_TYPE_LABELS[app.appType]],
+                  ["Submitted On", app.submittedOn],
+                  ["SLA Deadline", app.slaDeadline],
+                  ["Days Remaining", `${daysUntil(app.slaDeadline)}d`],
+                  ["Deficiencies", String(app.deficiencyCount)],
+                  ["Assigned To", assignedUser?.name ?? "Unassigned"],
                 ].map(([k, v]) => (
                   <div key={k} className="rounded-lg bg-accent/30 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{k}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {k}
+                    </p>
                     <p className="text-sm font-medium text-foreground mt-0.5">{v}</p>
                   </div>
                 ))}
@@ -204,7 +275,9 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
 
               {app.remarks && (
                 <div className="rounded-lg border border-border bg-muted/40 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Remarks</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                    Remarks
+                  </p>
                   <p className="text-sm text-foreground">{app.remarks}</p>
                 </div>
               )}
@@ -212,8 +285,14 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
               {app.evcDate && (
                 <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
                   <p className="text-xs font-semibold text-violet-700 mb-1">📅 EVC Visit</p>
-                  <p className="text-sm text-violet-800">Date: <strong>{app.evcDate}</strong></p>
-                  {app.evcCommittee && <p className="text-xs text-violet-600 mt-1">Committee: {app.evcCommittee.join(", ")}</p>}
+                  <p className="text-sm text-violet-800">
+                    Date: <strong>{app.evcDate}</strong>
+                  </p>
+                  {app.evcCommittee && (
+                    <p className="text-xs text-violet-600 mt-1">
+                      Committee: {app.evcCommittee.join(", ")}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -237,8 +316,10 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
                     <>
                       <textarea
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                        rows={2} placeholder="Remarks (optional)"
-                        value={transitionRemarks} onChange={(e) => setTransitionRemarks(e.target.value)}
+                        rows={2}
+                        placeholder="Remarks (optional)"
+                        value={transitionRemarks}
+                        onChange={(e) => setTransitionRemarks(e.target.value)}
                       />
                       <Button size="sm" className="mt-2" onClick={doTransition}>
                         Confirm → {STAGE_LABELS[transitionStage as AppStage]}
@@ -253,18 +334,34 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold text-amber-800">📌 Raise Deficiency</p>
-                    <button onClick={() => setShowDefForm(!showDefForm)} className="text-xs text-amber-700 font-medium underline">{showDefForm ? "Cancel" : "Add"}</button>
+                    <button
+                      onClick={() => setShowDefForm(!showDefForm)}
+                      className="text-xs text-amber-700 font-medium underline"
+                    >
+                      {showDefForm ? "Cancel" : "Add"}
+                    </button>
                   </div>
                   {showDefForm && (
                     <div className="space-y-2">
                       <textarea
                         className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        rows={2} placeholder="Describe the deficiency…"
-                        value={deficiencyDesc} onChange={(e) => setDeficiencyDesc(e.target.value)}
+                        rows={2}
+                        placeholder="Describe the deficiency…"
+                        value={deficiencyDesc}
+                        onChange={(e) => setDeficiencyDesc(e.target.value)}
                       />
-                      <input type="date" className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        value={deficiencyDue} onChange={(e) => setDeficiencyDue(e.target.value)} />
-                      <Button size="sm" variant="outline" className="border-amber-400 text-amber-800 hover:bg-amber-100" onClick={doRaiseDeficiency}>
+                      <input
+                        type="date"
+                        className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        value={deficiencyDue}
+                        onChange={(e) => setDeficiencyDue(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-amber-400 text-amber-800 hover:bg-amber-100"
+                        onClick={doRaiseDeficiency}
+                      >
                         Raise Deficiency
                       </Button>
                     </div>
@@ -279,46 +376,98 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
             <>
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-foreground">Uploaded Documents</p>
-                <button onClick={() => setShowUploadForm(!showUploadForm)} className="text-xs text-primary font-medium underline">{showUploadForm ? "Cancel" : "+ Upload"}</button>
+                <button
+                  onClick={() => setShowUploadForm(!showUploadForm)}
+                  className="text-xs text-primary font-medium underline"
+                >
+                  {showUploadForm ? "Cancel" : "+ Upload"}
+                </button>
               </div>
               {showUploadForm && (
                 <div className="rounded-xl border border-border p-4 space-y-3">
-                  <select className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
-                    value={uploadType} onChange={(e) => setUploadType(e.target.value as DocType)}>
-                    {(["Annexure1","Lease","NOC","FacultyList","FinancialStatement","BuildingPlan","Undertaking"] as DocType[]).map((t) => (
-                      <option key={t} value={t}>{t}</option>
+                  <select
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background"
+                    value={uploadType}
+                    onChange={(e) => setUploadType(e.target.value as DocType)}
+                  >
+                    {(
+                      [
+                        "Annexure1",
+                        "Lease",
+                        "NOC",
+                        "FacultyList",
+                        "FinancialStatement",
+                        "BuildingPlan",
+                        "Undertaking",
+                      ] as DocType[]
+                    ).map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
                     ))}
                   </select>
-                  <input className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Filename (e.g. noc_signed.pdf)" value={uploadName} onChange={(e) => setUploadName(e.target.value)} />
-                  <Button size="sm" onClick={doUpload}>Upload Document</Button>
+                  <input
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="Filename (e.g. noc_signed.pdf)"
+                    value={uploadName}
+                    onChange={(e) => setUploadName(e.target.value)}
+                  />
+                  <Button size="sm" onClick={doUpload}>
+                    Upload Document
+                  </Button>
                 </div>
               )}
               {docs.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">No documents uploaded yet.</p>
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No documents uploaded yet.
+                </p>
               ) : (
                 <div className="space-y-2">
                   {docs.map((doc) => (
-                    <div key={doc.id} className={`rounded-xl border p-3 ${doc.verified ? "border-green-200 bg-green-50" : "border-border bg-card"}`}>
+                    <div
+                      key={doc.id}
+                      className={`rounded-xl border p-3 ${doc.verified ? "border-green-200 bg-green-50" : "border-border bg-card"}`}
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-foreground">{doc.type}</span>
-                            <span className={`text-[10px] rounded-full px-2 py-0.5 font-medium ${doc.verified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                            <span className="text-xs font-semibold text-foreground">
+                              {doc.type}
+                            </span>
+                            <span
+                              className={`text-[10px] rounded-full px-2 py-0.5 font-medium ${doc.verified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}
+                            >
                               {doc.verified ? "✓ Verified" : "Pending"}
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">📄 {doc.fileName}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                            📄 {doc.fileName}
+                          </p>
                           {doc.ocrExtracted && (
-                            <p className="text-[10px] text-blue-600 mt-1">OCR: {Object.entries(doc.ocrExtracted).map(([k,v]) => `${k}=${v}`).join(", ")}</p>
+                            <p className="text-[10px] text-blue-600 mt-1">
+                              OCR:{" "}
+                              {Object.entries(doc.ocrExtracted)
+                                .map(([k, v]) => `${k}=${v}`)
+                                .join(", ")}
+                            </p>
                           )}
                           {doc.flags?.map((f, i) => (
-                            <p key={i} className="text-[10px] text-red-600 mt-1">⚠ {f}</p>
+                            <p key={i} className="text-[10px] text-red-600 mt-1">
+                              ⚠ {f}
+                            </p>
                           ))}
                         </div>
                         {!doc.verified && (
-                          <Button size="sm" variant="outline" className="text-xs h-7 border-green-300 text-green-700 hover:bg-green-50 shrink-0"
-                            onClick={() => { afStore.verifyDocument(doc.id, userId); notify("✅ Document verified"); onRefresh(); }}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 border-green-300 text-green-700 hover:bg-green-50 shrink-0"
+                            onClick={() => {
+                              afStore.verifyDocument(doc.id, userId);
+                              notify("✅ Document verified");
+                              onRefresh();
+                            }}
+                          >
                             Verify
                           </Button>
                         )}
@@ -334,45 +483,79 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
           {activeTab === "tasks" && (
             <div className="space-y-3">
               {tasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">No tasks for this application.</p>
-              ) : tasks.map((task) => {
-                const dl = daysUntil(task.dueDate);
-                return (
-                  <div key={task.id} className={`rounded-xl border p-4 ${task.status === "Resolved" ? "border-green-200 bg-green-50/50 opacity-70" : dl < 0 ? "border-red-200 bg-red-50" : "border-border bg-card"}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ${
-                            task.type === "Deficiency" ? "bg-amber-100 text-amber-700" :
-                            task.type === "EVCVisit"   ? "bg-violet-100 text-violet-700" :
-                            task.type === "Compliance" ? "bg-green-100 text-green-700" :
-                                                         "bg-blue-100 text-blue-700"}`}>
-                            {task.type}
-                          </span>
-                          <span className={`text-[10px] rounded-full px-2 py-0.5 font-medium ${
-                            task.status === "Resolved"   ? "bg-green-100 text-green-700" :
-                            task.status === "InProgress" ? "bg-blue-100 text-blue-700" :
-                            task.status === "Overdue"    ? "bg-red-100 text-red-700" :
-                                                           "bg-muted text-muted-foreground"}`}>
-                            {task.status}
-                          </span>
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No tasks for this application.
+                </p>
+              ) : (
+                tasks.map((task) => {
+                  const dl = daysUntil(task.dueDate);
+                  return (
+                    <div
+                      key={task.id}
+                      className={`rounded-xl border p-4 ${task.status === "Resolved" ? "border-green-200 bg-green-50/50 opacity-70" : dl < 0 ? "border-red-200 bg-red-50" : "border-border bg-card"}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ${
+                                task.type === "Deficiency"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : task.type === "EVCVisit"
+                                    ? "bg-violet-100 text-violet-700"
+                                    : task.type === "Compliance"
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-blue-100 text-blue-700"
+                              }`}
+                            >
+                              {task.type}
+                            </span>
+                            <span
+                              className={`text-[10px] rounded-full px-2 py-0.5 font-medium ${
+                                task.status === "Resolved"
+                                  ? "bg-green-100 text-green-700"
+                                  : task.status === "InProgress"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : task.status === "Overdue"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {task.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-foreground mt-1">{task.description}</p>
+                          <p
+                            className={`text-xs mt-1 ${dl < 0 ? "text-red-600 font-medium" : dl < 7 ? "text-amber-600" : "text-muted-foreground"}`}
+                          >
+                            Due: {task.dueDate}{" "}
+                            {dl < 0 ? `(${Math.abs(dl)}d overdue)` : `(${dl}d left)`}
+                          </p>
+                          {task.remarks && (
+                            <p className="text-xs text-muted-foreground mt-1 italic">
+                              {task.remarks}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-sm text-foreground mt-1">{task.description}</p>
-                        <p className={`text-xs mt-1 ${dl < 0 ? "text-red-600 font-medium" : dl < 7 ? "text-amber-600" : "text-muted-foreground"}`}>
-                          Due: {task.dueDate} {dl < 0 ? `(${Math.abs(dl)}d overdue)` : `(${dl}d left)`}
-                        </p>
-                        {task.remarks && <p className="text-xs text-muted-foreground mt-1 italic">{task.remarks}</p>}
+                        {task.status !== "Resolved" && task.status !== "Closed" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 shrink-0"
+                            onClick={() => {
+                              afStore.resolveTask(task.id, userId, "Resolved via dashboard");
+                              notify("✅ Task resolved");
+                              onRefresh();
+                            }}
+                          >
+                            Resolve
+                          </Button>
+                        )}
                       </div>
-                      {task.status !== "Resolved" && task.status !== "Closed" && (
-                        <Button size="sm" variant="outline" className="text-xs h-7 shrink-0"
-                          onClick={() => { afStore.resolveTask(task.id, userId, "Resolved via dashboard"); notify("✅ Task resolved"); onRefresh(); }}>
-                          Resolve
-                        </Button>
-                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           )}
 
@@ -380,7 +563,9 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
           {activeTab === "audit" && (
             <div className="relative space-y-0">
               {auditLogs.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">No audit entries yet.</p>
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No audit entries yet.
+                </p>
               ) : (
                 <div className="space-y-0 border-l-2 border-border ml-3">
                   {auditLogs.map((log) => {
@@ -390,14 +575,19 @@ function ApplicationDetail({ app, userId, onClose, onRefresh }: {
                         <div className="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 border-background bg-primary" />
                         <p className="text-xs font-semibold text-foreground">{log.action}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {actor?.name ?? log.userId} · {new Date(log.timestamp).toLocaleString("en-IN")}
+                          {actor?.name ?? log.userId} ·{" "}
+                          {new Date(log.timestamp).toLocaleString("en-IN")}
                         </p>
                         {log.fromStage && log.toStage && (
                           <p className="text-[10px] text-primary mt-0.5">
                             {STAGE_LABELS[log.fromStage]} → {STAGE_LABELS[log.toStage]}
                           </p>
                         )}
-                        {log.remarks && <p className="text-[10px] text-muted-foreground italic mt-0.5">{log.remarks}</p>}
+                        {log.remarks && (
+                          <p className="text-[10px] text-muted-foreground italic mt-0.5">
+                            {log.remarks}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
@@ -423,20 +613,24 @@ function ApplicationsPage() {
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [tick, setTick] = useState(0); // force re-render after mutations
 
-  const allApps = useMemo(() =>
-    afStore.searchApplications(search, {
-      stage:   filterStage   || undefined,
-      region:  filterRegion  || undefined,
-      appType: filterType    || undefined,
-      status:  filterStatus  || undefined,
-    }),
+  const allApps = useMemo(
+    () =>
+      afStore.searchApplications(search, {
+        stage: filterStage || undefined,
+        region: filterRegion || undefined,
+        appType: filterType || undefined,
+        status: filterStatus || undefined,
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [search, filterStage, filterRegion, filterType, filterStatus, tick]
+    [search, filterStage, filterRegion, filterType, filterStatus, tick],
   );
 
   // Role-based filtering
   const apps = useMemo(() => {
-    const roleApps = afStore.getApplicationsForRole(role as Parameters<typeof getDemoUserId>[0], userId);
+    const roleApps = afStore.getApplicationsForRole(
+      role as Parameters<typeof getDemoUserId>[0],
+      userId,
+    );
     const roleIds = new Set(roleApps.map((a) => a.id));
     return allApps.filter((a) => roleIds.has(a.id));
   }, [allApps, role, userId]);
@@ -444,15 +638,19 @@ function ApplicationsPage() {
   const selectedApp = selectedAppId ? afStore.getApplication(selectedAppId) : null;
 
   const regions = [...new Set(afStore.applications.map((a) => a.region))].sort();
-  const stages  = Object.keys(STAGE_LABELS) as AppStage[];
+  const stages = Object.keys(STAGE_LABELS) as AppStage[];
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Applications</h1>
-          <p className="text-sm text-muted-foreground mt-1">{apps.length} result{apps.length !== 1 ? "s" : ""} · role: <strong>{role}</strong></p>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
+            Applications
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {apps.length} result{apps.length !== 1 ? "s" : ""} · role: <strong>{role}</strong>
+          </p>
         </div>
       </div>
 
@@ -462,27 +660,59 @@ function ApplicationsPage() {
           <input
             className="sm:col-span-2 lg:col-span-2 rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="🔍  Search by App ID, institution name or AICTE ID…"
-            value={search} onChange={(e) => setSearch(e.target.value)}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
-          <select className="rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={filterStage} onChange={(e) => setFilterStage(e.target.value as AppStage | "")}>
+          <select
+            className="rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            value={filterStage}
+            onChange={(e) => setFilterStage(e.target.value as AppStage | "")}
+          >
             <option value="">All Stages</option>
-            {stages.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
+            {stages.map((s) => (
+              <option key={s} value={s}>
+                {STAGE_LABELS[s]}
+              </option>
+            ))}
           </select>
-          <select className="rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={filterRegion} onChange={(e) => setFilterRegion(e.target.value)}>
+          <select
+            className="rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            value={filterRegion}
+            onChange={(e) => setFilterRegion(e.target.value)}
+          >
             <option value="">All Regions</option>
-            {regions.map((r) => <option key={r} value={r}>{r}</option>)}
+            {regions.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
           </select>
-          <select className="rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={filterType} onChange={(e) => setFilterType(e.target.value as AppType | "")}>
+          <select
+            className="rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as AppType | "")}
+          >
             <option value="">All Types</option>
-            {(["EoA","NewInst","NewCourse","Closure"] as AppType[]).map((t) => <option key={t} value={t}>{APP_TYPE_LABELS[t]}</option>)}
+            {(["EoA", "NewInst", "NewCourse", "Closure"] as AppType[]).map((t) => (
+              <option key={t} value={t}>
+                {APP_TYPE_LABELS[t]}
+              </option>
+            ))}
           </select>
         </div>
         {(search || filterStage || filterRegion || filterType || filterStatus) && (
-          <button onClick={() => { setSearch(""); setFilterStage(""); setFilterRegion(""); setFilterType(""); setFilterStatus(""); }}
-            className="mt-2 text-xs text-muted-foreground underline">Clear filters</button>
+          <button
+            onClick={() => {
+              setSearch("");
+              setFilterStage("");
+              setFilterRegion("");
+              setFilterType("");
+              setFilterStatus("");
+            }}
+            className="mt-2 text-xs text-muted-foreground underline"
+          >
+            Clear filters
+          </button>
         )}
       </div>
 
@@ -491,16 +721,25 @@ function ApplicationsPage() {
         {apps.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-4xl mb-3">🔍</p>
-            <p className="text-muted-foreground text-sm">No applications match the current filters.</p>
+            <p className="text-muted-foreground text-sm">
+              No applications match the current filters.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  {["App ID","Institution","Type","Region","Stage","SLA","Status",""].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{h}</th>
-                  ))}
+                  {["App ID", "Institution", "Type", "Region", "Stage", "SLA", "Status", ""].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
+                        {h}
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -509,38 +748,64 @@ function ApplicationsPage() {
                   const overdue = isOverdue(app);
                   const dl = daysUntil(app.slaDeadline);
                   return (
-                    <tr key={app.id}
+                    <tr
+                      key={app.id}
                       className={`border-b border-border last:border-0 hover:bg-accent/30 cursor-pointer transition-colors ${overdue ? "bg-red-50/30" : ""}`}
-                      onClick={() => setSelectedAppId(app.id)}>
+                      onClick={() => setSelectedAppId(app.id)}
+                    >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <span className="font-semibold text-foreground">{app.id}</span>
-                          {overdue && <span className="text-[9px] bg-red-100 text-red-600 rounded-full px-1.5 py-0.5 font-bold">OD</span>}
+                          {overdue && (
+                            <span className="text-[9px] bg-red-100 text-red-600 rounded-full px-1.5 py-0.5 font-bold">
+                              OD
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-foreground truncate max-w-[180px]">{inst?.name}</p>
+                        <p className="font-medium text-foreground truncate max-w-[180px]">
+                          {inst?.name}
+                        </p>
                         <p className="text-[10px] text-muted-foreground">{inst?.aicteId}</p>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">{app.appType}</td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">{app.region}</td>
-                      <td className="px-4 py-3"><StageBadge stage={app.currentStage} /></td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-medium ${dl < 0 ? "text-red-600" : dl < 7 ? "text-amber-600" : "text-muted-foreground"}`}>
+                        <StageBadge stage={app.currentStage} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-xs font-medium ${dl < 0 ? "text-red-600" : dl < 7 ? "text-amber-600" : "text-muted-foreground"}`}
+                        >
                           {dl < 0 ? `${Math.abs(dl)}d OD` : `${dl}d`}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ${
-                          app.status === "Approved" ? "bg-green-100 text-green-700" :
-                          app.status === "Rejected" ? "bg-red-100 text-red-700" :
-                          app.status === "Returned" ? "bg-amber-100 text-amber-700" :
-                                                       "bg-blue-100 text-blue-700"}`}>
+                        <span
+                          className={`text-[10px] rounded-full px-2 py-0.5 font-semibold ${
+                            app.status === "Approved"
+                              ? "bg-green-100 text-green-700"
+                              : app.status === "Rejected"
+                                ? "bg-red-100 text-red-700"
+                                : app.status === "Returned"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-blue-100 text-blue-700"
+                          }`}
+                        >
                           {app.status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); setSelectedAppId(app.id); }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAppId(app.id);
+                          }}
+                        >
                           View →
                         </Button>
                       </td>
@@ -559,7 +824,11 @@ function ApplicationsPage() {
           app={selectedApp}
           userId={userId}
           onClose={() => setSelectedAppId(null)}
-          onRefresh={() => { setTick((t) => t + 1); setSelectedAppId(null); setTimeout(() => setSelectedAppId(selectedApp.id), 10); }}
+          onRefresh={() => {
+            setTick((t) => t + 1);
+            setSelectedAppId(null);
+            setTimeout(() => setSelectedAppId(selectedApp.id), 10);
+          }}
         />
       )}
     </div>

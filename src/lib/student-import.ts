@@ -14,12 +14,7 @@ export type ParsedStudent = {
 };
 
 export type ImportStatus =
-  | "valid"
-  | "duplicate_db"
-  | "duplicate_file"
-  | "missing_apaar"
-  | "invalid_apaar"
-  | "missing_name";
+  "valid" | "duplicate_db" | "duplicate_file" | "missing_apaar" | "invalid_apaar" | "missing_name";
 
 export type ReviewedStudent = ParsedStudent & {
   status: ImportStatus;
@@ -141,9 +136,7 @@ const HEADER_MAP: Record<string, keyof Omit<ParsedStudent, "rowNumber">> = {
   phone: "contact",
 };
 
-export type CsvParseResult =
-  | { ok: true; students: ParsedStudent[] }
-  | { ok: false; error: string };
+export type CsvParseResult = { ok: true; students: ParsedStudent[] } | { ok: false; error: string };
 
 export function parseStudentsCsv(text: string): CsvParseResult {
   const rows = parseCsv(text);
