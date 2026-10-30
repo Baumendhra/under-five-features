@@ -1,6 +1,8 @@
-// APAAR mock verification adapter
+// APAAR mock verification adapter & orchestrator bridge
 // Simulates external APAAR verification API responses
-// In production, replace with real APAAR API calls
+// In production, replace with real APAAR API calls via OfficialApaarProvider
+
+export * from "@/lib/apaar-orchestrator";
 
 export type ApaarVerifyResult = {
   apaar_id: string;

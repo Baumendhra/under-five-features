@@ -32,6 +32,8 @@ import {
   QUALITY_BAND_CONFIG,
 } from "@/lib/data-quality";
 import { apaarStatus } from "@/lib/student-import";
+import { verifyStudentWithOrchestrator } from "@/lib/apaar-verification.functions";
+import { validateLocalApaar, maskApaarId } from "@/lib/apaar-orchestrator";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +64,7 @@ import {
   Clock,
   ArrowRight,
   MessageSquare,
+  RefreshCw,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -249,8 +252,38 @@ function StudentProfilePage() {
 
   const queryClient = useQueryClient();
   const respondFn = useServerFn(provideAdditionalInformation);
+  const orchestrateVerifyFn = useServerFn(verifyStudentWithOrchestrator);
+
+  const [studentConsentGiven, setStudentConsentGiven] = useState(true);
+  const [verifyingSelf, setVerifyingSelf] = useState(false);
 
   const myRecord = students[0] ?? null;
+
+  async function handleVerifySelf() {
+    if (!myRecord?.id || !myRecord.apaar_id) return;
+    setVerifyingSelf(true);
+    try {
+      const result = await orchestrateVerifyFn({
+        data: {
+          studentId: myRecord.id,
+          consentRecorded: studentConsentGiven,
+          forceRefresh: true,
+        },
+      });
+      if (result.externalStatus === "VERIFIED") {
+        toast.success(`APAAR verified via ${result.providerName} (Simulated Demo Mode)`);
+      } else if (result.externalStatus === "PENDING_CONSENT") {
+        toast.info("Please confirm your consent to proceed with verification.");
+      } else {
+        toast.error(result.humanReadableResult);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["students"] });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Verification request failed.");
+    } finally {
+      setVerifyingSelf(false);
+    }
+  }
 
   // Data Quality evaluation for current student
   const qualityReport = useMemo(() => {
@@ -501,56 +534,137 @@ function StudentProfilePage() {
         </dl>
       </section>
 
-      {/* APAAR Status */}
-      <section className="rounded-xl border border-border bg-card p-6">
-        <h2 className="font-display text-xl text-foreground mb-4">APAAR Verification</h2>
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">APAAR ID</p>
-            <p className="mt-0.5 font-mono text-sm text-foreground">
-              {maskApaar(myRecord.apaar_id)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">Format check</p>
-            <Badge
-              className={
-                apaar === "verified"
-                  ? "bg-green-100 text-green-800"
-                  : apaar === "missing"
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-red-100 text-red-800"
-              }
-            >
-              {apaar === "verified"
-                ? "✓ Valid format (12 digits)"
-                : apaar === "missing"
-                  ? "Not provided"
-                  : "Invalid format"}
-            </Badge>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">Verification status</p>
-            <Badge
-              className={
-                verifyStatus === "verified"
-                  ? "bg-green-100 text-green-800"
-                  : verifyStatus === "not_found"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-amber-100 text-amber-800"
-              }
-            >
-              {verifyStatus === "verified"
-                ? "✓ Verified"
-                : verifyStatus === "not_found"
-                  ? "Not found in APAAR registry"
-                  : verifyStatus === "failed"
-                    ? "Verification failed"
-                    : "⏳ Pending verification"}
-            </Badge>
-          </div>
-        </div>
-      </section>
+      {/* APAAR Status & Orchestrated Verification */}
+      {(() => {
+        const local = validateLocalApaar(myRecord.apaar_id);
+        return (
+          <section className="rounded-xl border border-border bg-card p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-xl text-foreground">APAAR Verification Engine</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Decoupled local checksum validation and external DigiLocker/ABC registry gateway
+                  verification.
+                </p>
+              </div>
+              <Badge variant="secondary" className="text-[11px] font-normal">
+                Provider: Mock DigiLocker/ABC (Simulated)
+              </Badge>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 pt-1">
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Masked APAAR ID</p>
+                <p className="font-mono text-sm font-bold text-foreground">
+                  {maskApaarId(myRecord.apaar_id)}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {myRecord.apaar_id ? "Protected national student identifier" : "Not yet assigned"}
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Local Validation</p>
+                <div className="flex flex-wrap gap-1">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px]",
+                      local.formatStatus === "FORMAT_VALID"
+                        ? "border-emerald-300 text-emerald-700 dark:text-emerald-400"
+                        : "border-rose-300 text-rose-700 dark:text-rose-400",
+                    )}
+                  >
+                    {local.formatStatus === "FORMAT_VALID" ? "12 Digits ✓" : "Format Invalid"}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px]",
+                      local.checksumStatus === "CHECKSUM_VALID"
+                        ? "border-emerald-300 text-emerald-700 dark:text-emerald-400"
+                        : "border-rose-300 text-rose-700 dark:text-rose-400",
+                    )}
+                  >
+                    {local.checksumStatus === "CHECKSUM_VALID"
+                      ? "Verhoeff OK ✓"
+                      : "Checksum Failed"}
+                  </Badge>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Format and mathematical checksum algorithm
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">External Gateway</p>
+                <div>
+                  {verifyStatus === "verified" ? (
+                    <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">
+                      ✓ Verified (Simulated)
+                    </Badge>
+                  ) : verifyStatus === "not_found" || verifyStatus === "failed" ? (
+                    <Badge variant="destructive" className="text-xs">
+                      Not found in registry
+                    </Badge>
+                  ) : verifyStatus === "manual_review" ? (
+                    <Badge variant="outline" className="border-amber-400 text-amber-700 text-xs">
+                      Manual review required
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-xs">
+                      ⏳ Unverified
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  {myRecord.apaar_verified_at
+                    ? `Verified at ${new Date(myRecord.apaar_verified_at).toLocaleDateString()}`
+                    : "Awaiting gateway reconciliation"}
+                </p>
+              </div>
+            </div>
+
+            {/* Student Self-Verification Action */}
+            {local.isValid && verifyStatus !== "verified" && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="consent-check"
+                    checked={studentConsentGiven}
+                    onChange={(e) => setStudentConsentGiven(e.target.checked)}
+                    className="mt-0.5 accent-primary cursor-pointer"
+                  />
+                  <label
+                    htmlFor="consent-check"
+                    className="text-xs text-muted-foreground leading-relaxed cursor-pointer"
+                  >
+                    I explicitly authorize EduTrace to query the Academic Bank of Credits (ABC) /
+                    DigiLocker verification gateway to authenticate my academic identifier and
+                    student enrolment record.
+                  </label>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    disabled={!studentConsentGiven || verifyingSelf}
+                    onClick={() => void handleVerifySelf()}
+                    className="gap-1.5 text-xs"
+                  >
+                    {verifyingSelf ? (
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    {verifyingSelf ? "Verifying with Gateway..." : "Verify My APAAR Now"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       {/* Correction requests */}
       <section>

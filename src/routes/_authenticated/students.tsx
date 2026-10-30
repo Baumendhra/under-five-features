@@ -3,8 +3,18 @@ import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { studentsQueryOptions } from "@/lib/students.functions";
-import { verifyStudentApaar, exportStudentsCsv } from "@/lib/edutrace.functions";
+import { studentsQueryOptions, type StudentRecord } from "@/lib/students.functions";
+import { exportStudentsCsv } from "@/lib/edutrace.functions";
+import {
+  verifyStudentWithOrchestrator,
+  batchVerifyStudentsWithOrchestrator,
+  type BatchVerificationResponse,
+} from "@/lib/apaar-verification.functions";
+import {
+  validateLocalApaar,
+  maskApaarId,
+  type OrchestratedVerificationResult,
+} from "@/lib/apaar-orchestrator";
 import { apaarStatus } from "@/lib/student-import";
 import {
   evaluateStudentRecord,
@@ -42,8 +52,14 @@ import {
   Info,
   CheckCircle2,
   ArrowUpDown,
+  Sparkles,
+  FileCheck,
+  RefreshCw,
+  Sliders,
+  XCircle,
+  Building2,
+  UserCheck,
 } from "lucide-react";
-import type { StudentRecord } from "@/lib/students.functions";
 
 export const Route = createFileRoute("/_authenticated/students")({
   head: () => ({
@@ -60,40 +76,81 @@ export const Route = createFileRoute("/_authenticated/students")({
 });
 
 function ApaarBadge({ student }: { student: StudentRecord }) {
-  const local = apaarStatus(student.apaar_id);
+  const local = validateLocalApaar(student.apaar_id);
   const serverStatus = student.apaar_verify_status ?? undefined;
 
-  if (local === "missing") {
+  if (!student.apaar_id) {
     return (
-      <Badge variant="outline" className="text-muted-foreground">
+      <Badge variant="outline" className="text-muted-foreground text-[11px]">
         No APAAR
       </Badge>
     );
   }
-  if (local === "invalid") {
-    return <Badge variant="destructive">Bad APAAR</Badge>;
+
+  if (local.formatStatus === "FORMAT_INVALID") {
+    return (
+      <Badge
+        variant="destructive"
+        className="text-[11px]"
+        title="Must be exactly 12 numeric digits"
+      >
+        Format Invalid
+      </Badge>
+    );
   }
-  // 12-digit — show server verification status
+
+  if (local.checksumStatus === "CHECKSUM_INVALID") {
+    return (
+      <Badge
+        variant="outline"
+        className="border-rose-400 text-rose-700 dark:text-rose-400 text-[11px]"
+        title="Failed Verhoeff checksum test (likely typo)"
+      >
+        Checksum Error
+      </Badge>
+    );
+  }
+
+  // Local is valid 12-digit with valid checksum -> inspect server verification status
   if (serverStatus === "verified") {
     return (
-      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-        ✓ Verified
+      <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-[11px] gap-1">
+        <span>✓ Verified</span>
+        <span className="text-[9px] opacity-75 font-normal">(Simulated)</span>
       </Badge>
     );
   }
-  if (serverStatus === "not_found") {
+  if (serverStatus === "manual_review") {
     return (
-      <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-        Not found
+      <Badge
+        variant="outline"
+        className="border-amber-400 text-amber-700 dark:text-amber-400 text-[11px]"
+      >
+        Manual Review
       </Badge>
     );
   }
-  if (serverStatus === "failed") {
-    return <Badge variant="destructive">Failed</Badge>;
+  if (serverStatus === "failed" || serverStatus === "not_found") {
+    return (
+      <Badge variant="destructive" className="text-[11px]">
+        External Failed
+      </Badge>
+    );
   }
+  if (serverStatus === "service_unavailable") {
+    return (
+      <Badge
+        variant="outline"
+        className="border-slate-400 text-slate-700 dark:text-slate-400 text-[11px]"
+      >
+        Service Unavailable
+      </Badge>
+    );
+  }
+
   return (
-    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-      ⏳ Pending
+    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-[11px]">
+      ⏳ Unverified
     </Badge>
   );
 }
@@ -113,8 +170,15 @@ function StudentsPage() {
     report: StudentQualityReport;
   } | null>(null);
 
+  // Sprint 5: Batch and Inspection dialog state
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchResult, setBatchResult] = useState<BatchVerificationResponse | null>(null);
+  const [inspectionStudent, setInspectionStudent] = useState<StudentRecord | null>(null);
+
   const queryClient = useQueryClient();
-  const verifyFn = useServerFn(verifyStudentApaar);
+  const orchestrateVerifyFn = useServerFn(verifyStudentWithOrchestrator);
+  const batchOrchestrateFn = useServerFn(batchVerifyStudentsWithOrchestrator);
   const exportFn = useServerFn(exportStudentsCsv);
   const { canExport, canImportStudents } = useUserProfile();
 
@@ -192,19 +256,62 @@ function StudentsPage() {
     if (!student.apaar_id) return;
     setVerifyingId(student.id);
     try {
-      const result = await verifyFn({ data: { studentId: student.id, apaarId: student.apaar_id } });
-      if (result.status === "verified") {
-        toast.success(`APAAR ${student.apaar_id} verified ✓`);
-      } else if (result.status === "not_found") {
-        toast.warning(`APAAR ${student.apaar_id} not found in registry`);
+      const result = await orchestrateVerifyFn({
+        data: {
+          studentId: student.id,
+          consentRecorded: true,
+          forceRefresh: true,
+        },
+      });
+      if (result.externalStatus === "VERIFIED") {
+        toast.success(
+          `APAAR ${result.maskedApaar} verified via ${result.providerName} (Simulated Demo Mode)`,
+        );
+      } else if (result.externalStatus === "PENDING_CONSENT") {
+        toast.info("Verification pending: Student consent required.");
+      } else if (result.externalStatus === "MANUAL_REVIEW") {
+        toast.warning("Verification requires manual institutional review.");
       } else {
-        toast.error(`Verification failed: ${result.message}`);
+        toast.error(result.humanReadableResult);
       }
       await queryClient.invalidateQueries({ queryKey: ["students"] });
-    } catch {
-      toast.error("Verification request failed.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Verification request failed.");
     } finally {
       setVerifyingId(null);
+    }
+  }
+
+  async function handleBatchVerify() {
+    const eligibleStudents = students
+      .filter(
+        (s) =>
+          s.apaar_id &&
+          validateLocalApaar(s.apaar_id).isValid &&
+          s.apaar_verify_status !== "verified",
+      )
+      .slice(0, 30);
+
+    if (eligibleStudents.length === 0) {
+      toast.info("No unverified students with valid local formats found.");
+      return;
+    }
+
+    setBatchRunning(true);
+    setBatchResult(null);
+    try {
+      const res = await batchOrchestrateFn({
+        data: { studentIds: eligibleStudents.map((s) => s.id) },
+      });
+      setBatchResult(res);
+      toast.success(
+        `Batch verification complete: ${res.verifiedCount} verified, ${res.manualReviewCount} need review.`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["students"] });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Batch verification failed.");
+    } finally {
+      setBatchRunning(false);
     }
   }
 
@@ -301,9 +408,21 @@ function StudentsPage() {
             </>
           )}
           {canImportStudents && (
-            <Button asChild variant="outline" size="sm">
-              <a href="/import">Import more</a>
-            </Button>
+            <>
+              <Button asChild variant="outline" size="sm">
+                <a href="/import">Import more</a>
+              </Button>
+              <Button
+                id="btn-batch-verify"
+                variant="default"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setBatchOpen(true)}
+              >
+                <Sparkles className="h-4 w-4" />
+                Batch Verify APAAR
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -433,9 +552,10 @@ function StudentsPage() {
             <TableBody>
               {filtered.map((student) => {
                 const local = apaarStatus(student.apaar_id);
-                const serverStatus = student.apaar_verify_status ?? undefined;
-                const canVerify =
-                  local === "verified" && (!serverStatus || serverStatus === "pending");
+                const localCheck = student.apaar_id ? validateLocalApaar(student.apaar_id) : null;
+                const canVerify = Boolean(
+                  localCheck?.isValid && student.apaar_verify_status !== "verified",
+                );
                 const rep = studentReportsMap.get(student.id);
                 const bandConfig = rep ? QUALITY_BAND_CONFIG[rep.band] : null;
 
@@ -513,6 +633,15 @@ function StudentsPage() {
                             {verifyingId === student.id ? "…" : "Verify"}
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setInspectionStudent(student)}
+                          title="View local & external APAAR verification telemetry"
+                        >
+                          Audit
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -783,6 +912,270 @@ function StudentsPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Sprint 5: Batch APAAR Verification Dialog */}
+      <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Batch APAAR Verification Orchestration
+            </DialogTitle>
+            <DialogDescription>
+              Execute local format checks, Verhoeff checksum validation, and external registry
+              verification across multiple students.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3.5 text-xs space-y-1.5">
+              <div className="flex items-center gap-1.5 font-semibold text-primary">
+                <Info className="h-4 w-4 shrink-0" />
+                <span>
+                  Provider Environment: Mock DigiLocker/ABC Simulator (Simulated Demo Mode)
+                </span>
+              </div>
+              <p className="text-muted-foreground leading-relaxed">
+                Demonstration mode executes deterministic mock verification against synthetic test
+                IDs. In production with authorized credentials (APAAR_API_KEY, APAAR_CLIENT_ID,
+                APAAR_CLIENT_SECRET), this orchestrator dispatches signed requests to the official
+                Academic Bank of Credits gateway.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 p-3 text-xs">
+              <div>
+                <span className="font-semibold text-foreground">Eligible Unverified Records: </span>
+                <span className="font-mono text-muted-foreground">
+                  {
+                    students.filter(
+                      (s) =>
+                        s.apaar_id &&
+                        validateLocalApaar(s.apaar_id).isValid &&
+                        s.apaar_verify_status !== "verified",
+                    ).length
+                  }{" "}
+                  student(s) with valid 12-digit format
+                </span>
+              </div>
+              <Button
+                size="sm"
+                disabled={batchRunning}
+                onClick={() => void handleBatchVerify()}
+                className="gap-1.5 text-xs"
+              >
+                {batchRunning ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileCheck className="h-3.5 w-3.5" />
+                )}
+                {batchRunning ? "Orchestrating..." : "Start Batch Verification (Max 30)"}
+              </Button>
+            </div>
+
+            {batchRunning && (
+              <div className="space-y-2 py-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Contacting verification gateway...</span>
+                  <span>Processing batch</span>
+                </div>
+                <Progress value={65} className="h-2 animate-pulse" />
+              </div>
+            )}
+
+            {batchResult && (
+              <div className="space-y-3 pt-2">
+                <h4 className="text-sm font-semibold text-foreground">Batch Execution Summary</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="rounded-md border border-border bg-card p-2.5 text-center">
+                    <p className="text-[10px] text-muted-foreground">Processed</p>
+                    <p className="text-xl font-bold text-foreground">
+                      {batchResult.totalProcessed}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-emerald-300/40 bg-emerald-50/30 dark:bg-emerald-950/20 p-2.5 text-center">
+                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400">Verified</p>
+                    <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                      {batchResult.verifiedCount}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-amber-300/40 bg-amber-50/30 dark:bg-amber-950/20 p-2.5 text-center">
+                    <p className="text-[10px] text-amber-700 dark:text-amber-400">Manual Review</p>
+                    <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                      {batchResult.manualReviewCount}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-rose-300/40 bg-rose-50/30 dark:bg-rose-950/20 p-2.5 text-center">
+                    <p className="text-[10px] text-rose-700 dark:text-rose-400">
+                      Failed / Not Found
+                    </p>
+                    <p className="text-xl font-bold text-rose-600 dark:text-rose-400">
+                      {batchResult.failedCount}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="max-h-56 overflow-y-auto rounded-lg border border-border text-xs divide-y divide-border">
+                  {batchResult.results.map((res, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2.5 hover:bg-muted/10"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="font-mono font-medium text-foreground">{res.maskedApaar}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {res.humanReadableResult}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] shrink-0 capitalize",
+                          res.externalStatus === "VERIFIED"
+                            ? "border-emerald-300 text-emerald-700 dark:text-emerald-400"
+                            : res.externalStatus === "MANUAL_REVIEW"
+                              ? "border-amber-300 text-amber-700 dark:text-amber-400"
+                              : "border-rose-300 text-rose-700 dark:text-rose-400",
+                        )}
+                      >
+                        {res.externalStatus.toLowerCase().replace("_", " ")}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sprint 5: Student Verification Audit & Telemetry Dialog */}
+      <Dialog
+        open={inspectionStudent !== null}
+        onOpenChange={(open) => !open && setInspectionStudent(null)}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-primary" />
+              APAAR Verification Telemetry
+            </DialogTitle>
+            <DialogDescription>
+              Local checksum diagnostics and external gateway response for {inspectionStudent?.name}
+              .
+            </DialogDescription>
+          </DialogHeader>
+
+          {inspectionStudent &&
+            (() => {
+              const local = validateLocalApaar(inspectionStudent.apaar_id);
+              return (
+                <div className="space-y-4 pt-2 text-xs">
+                  {/* Local Diagnostics */}
+                  <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                    <h4 className="font-semibold text-foreground text-xs">
+                      1. Local Identifier Validation
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-muted-foreground">Masked Identifier: </span>
+                        <span className="font-mono font-bold text-foreground">
+                          {maskApaarId(inspectionStudent.apaar_id)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">12-Digit Format: </span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px]",
+                            local.formatStatus === "FORMAT_VALID"
+                              ? "border-emerald-300 text-emerald-700 dark:text-emerald-400"
+                              : "border-rose-300 text-rose-700 dark:text-rose-400",
+                          )}
+                        >
+                          {local.formatStatus === "FORMAT_VALID" ? "Valid (12 digits)" : "Invalid"}
+                        </Badge>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Verhoeff Checksum: </span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px]",
+                            local.checksumStatus === "CHECKSUM_VALID"
+                              ? "border-emerald-300 text-emerald-700 dark:text-emerald-400"
+                              : "border-rose-300 text-rose-700 dark:text-rose-400",
+                          )}
+                        >
+                          {local.checksumStatus === "CHECKSUM_VALID"
+                            ? "Checksum Passed"
+                            : "Checksum Failed"}
+                        </Badge>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Consent Recorded: </span>
+                        <span className="font-semibold text-foreground">
+                          {(inspectionStudent as any).consent_recorded ? "Yes ✓" : "Pending"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* External Gateway Diagnostics */}
+                  <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+                    <h4 className="font-semibold text-foreground text-xs">
+                      2. External Registry Verification
+                    </h4>
+                    <div className="space-y-1.5 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">External Status:</span>
+                        <ApaarBadge student={inspectionStudent} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Verification Provider:</span>
+                        <span className="font-medium text-foreground">
+                          Mock DigiLocker/ABC Simulator
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Mode Designation:</span>
+                        <Badge variant="secondary" className="text-[10px]">
+                          Simulated Demo Mode
+                        </Badge>
+                      </div>
+                      {inspectionStudent.apaar_verified_at && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Verified At:</span>
+                          <span className="font-mono text-muted-foreground">
+                            {new Date(inspectionStudent.apaar_verified_at).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
+                    <Button
+                      size="sm"
+                      disabled={verifyingId === inspectionStudent.id || !local.isValid}
+                      onClick={async () => {
+                        const s = inspectionStudent;
+                        setInspectionStudent(null);
+                        await handleVerify(s);
+                      }}
+                    >
+                      Execute Re-Verification
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setInspectionStudent(null)}>
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
         </DialogContent>
       </Dialog>
     </div>
