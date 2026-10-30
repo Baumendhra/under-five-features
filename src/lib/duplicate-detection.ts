@@ -1,5 +1,16 @@
-// Fuzzy duplicate detection module using Jaro-Winkler similarity.
+// Advanced Identity Resolution & Duplicate Detection Module
+// Supports both legacy fast scanning and multi-algorithm composite identity resolution.
 // No external dependencies — runs in browser and server environments.
+
+export * from "@/lib/identity-resolution";
+
+import {
+  jaroWinklerSimilarity,
+  normalizeText,
+  compareNames,
+  compareDob,
+  maskSensitiveValue,
+} from "@/lib/identity-resolution";
 
 export type DuplicatePair = {
   indexA: number;
@@ -14,74 +25,31 @@ export type StudentMinimal = {
   apaarId: string | null;
   name: string;
   dob: string | null;
+  id?: string | undefined;
+  contact?: string | null | undefined;
+  programmeCode?: string | null | undefined;
+  studentId?: string | null | undefined;
 };
-
-// ── Jaro-Winkler similarity ────────────────────────────────────────────────
-
-function jaro(s1: string, s2: string): number {
-  if (s1 === s2) return 1;
-  const len1 = s1.length;
-  const len2 = s2.length;
-  if (len1 === 0 || len2 === 0) return 0;
-  const matchDist = Math.floor(Math.max(len1, len2) / 2) - 1;
-  const s1Matches = new Array<boolean>(len1).fill(false);
-  const s2Matches = new Array<boolean>(len2).fill(false);
-  let matches = 0;
-  let transpositions = 0;
-  for (let i = 0; i < len1; i++) {
-    const lo = Math.max(0, i - matchDist);
-    const hi = Math.min(i + matchDist + 1, len2);
-    for (let j = lo; j < hi; j++) {
-      if (s2Matches[j] || s1[i] !== s2[j]) continue;
-      s1Matches[i] = true;
-      s2Matches[j] = true;
-      matches++;
-      break;
-    }
-  }
-  if (matches === 0) return 0;
-  let k = 0;
-  for (let i = 0; i < len1; i++) {
-    if (!s1Matches[i]) continue;
-    while (!s2Matches[k]) k++;
-    if (s1[i] !== s2[k]) transpositions++;
-    k++;
-  }
-  return (matches / len1 + matches / len2 + (matches - transpositions / 2) / matches) / 3;
-}
-
-function jaroWinkler(s1: string, s2: string, p = 0.1): number {
-  const jaroScore = jaro(s1, s2);
-  let prefix = 0;
-  for (let i = 0; i < Math.min(4, Math.min(s1.length, s2.length)); i++) {
-    if (s1[i] === s2[i]) prefix++;
-    else break;
-  }
-  return jaroScore + prefix * p * (1 - jaroScore);
-}
 
 // ── Normalization helpers ──────────────────────────────────────────────────
 
 function normName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeText(name);
 }
 
-function normApaar(id: string | null): string | null {
+function normApaar(id: string | null | undefined): string | null {
   if (!id) return null;
   const c = id.replace(/[^0-9]/g, "");
   return c.length === 12 ? c : null;
 }
 
-// ── Core duplicate detector ────────────────────────────────────────────────
+// ── Legacy Duplicate Detector (Preserved for Backwards Compatibility) ─────
 
 const FUZZY_THRESHOLD = 0.88; // JW score ≥ this → probable duplicate
 
 /**
  * Detect duplicate pairs in a list of students.
+ * Preserved for backwards compatibility with existing views and tests.
  * Checks:
  *  1. Exact APAAR ID match
  *  2. Exact normalised name + DOB match
@@ -130,7 +98,7 @@ export function detectDuplicates(students: StudentMinimal[]): DuplicatePair[] {
 
       // 3. Fuzzy name + same DOB
       if (a.dob && b.dob && a.dob === b.dob && nameA && nameB) {
-        const score = jaroWinkler(nameA, nameB);
+        const score = jaroWinklerSimilarity(nameA, nameB);
         if (score >= FUZZY_THRESHOLD) {
           pairs.push({
             indexA: i,
@@ -149,7 +117,7 @@ export function detectDuplicates(students: StudentMinimal[]): DuplicatePair[] {
 
 /**
  * Group duplicate pairs into clusters of related student indices.
- * Useful for showing "review groups" in the UI.
+ * Preserved for backwards compatibility.
  */
 export function clusterDuplicates(pairs: DuplicatePair[]): Set<number>[] {
   const parent = new Map<number, number>();

@@ -3,6 +3,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Json } from "@/integrations/supabase/types";
 import { verifyApaarId } from "@/lib/apaar-adapter";
+import { generateCandidatePairs, type StudentIdentityRecord } from "@/lib/identity-resolution";
 import {
   requireAicteAdmin,
   requireStaff,
@@ -59,6 +60,13 @@ export type DuplicateCase = {
   status: string;
   resolution: string | null;
   created_at: string;
+  updated_at?: string | null | undefined;
+  reviewed_by?: string | null | undefined;
+  match_score?: number | null | undefined;
+  confidence?: string | null | undefined;
+  match_details?: Json | null | undefined;
+  cluster_id?: string | null | undefined;
+  institution_id?: string | null | undefined;
 };
 
 export type AuditEntry = {
@@ -350,17 +358,52 @@ export const duplicateCasesQueryOptions = queryOptions({
 export const resolveDuplicateCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    (input: { caseId: string; status: string; resolution: string; finalise?: boolean }) => input,
+    (input: {
+      caseId: string;
+      status: string;
+      resolution: string;
+      actionType?:
+        "confirm_duplicate" | "not_duplicate" | "needs_information" | "escalate" | undefined;
+      finalise?: boolean | undefined;
+    }) => input,
   )
   .handler(async ({ data, context }) => {
-    const isFinalise = data.status === "resolved" || data.status === "dismissed";
+    const isFinalise =
+      data.status === "resolved" ||
+      data.status === "dismissed" ||
+      data.status === "confirmed" ||
+      data.actionType === "confirm_duplicate" ||
+      data.actionType === "not_duplicate";
+
     requireDuplicateResolvePermission(context.role, isFinalise);
+
+    if (!data.resolution || data.resolution.trim().length < 5) {
+      throw new Error("A resolution or justification note of at least 5 characters is required.");
+    }
+
+    // Determine safe status for DB (fallback to 'resolved' or 'dismissed' if enum constraint is strict)
+    let dbStatus = data.status;
+    let enrichedResolution = data.resolution.trim();
+
+    if (data.actionType === "confirm_duplicate") {
+      dbStatus = "resolved"; // Maps cleanly to standard DB check ('open','under_review','resolved','dismissed')
+      enrichedResolution = `[CONFIRMED DUPLICATE]: ${enrichedResolution}`;
+    } else if (data.actionType === "not_duplicate") {
+      dbStatus = "dismissed";
+      enrichedResolution = `[NOT DUPLICATE]: ${enrichedResolution}`;
+    } else if (data.actionType === "needs_information") {
+      dbStatus = "under_review";
+      enrichedResolution = `[NEEDS INFORMATION]: ${enrichedResolution}`;
+    } else if (data.actionType === "escalate") {
+      dbStatus = "under_review";
+      enrichedResolution = `[ESCALATED]: ${enrichedResolution}`;
+    }
 
     const { error } = await context.supabase
       .from("duplicate_cases")
       .update({
-        status: data.status,
-        resolution: data.resolution,
+        status: dbStatus,
+        resolution: enrichedResolution,
         reviewed_by: context.userId,
         updated_at: new Date().toISOString(),
       })
@@ -369,19 +412,181 @@ export const resolveDuplicateCase = createServerFn({ method: "POST" })
 
     await context.supabase.from("audit_logs").insert({
       user_id: context.userId,
-      action: "update",
+      action: data.actionType ?? data.status,
       entity_type: "duplicate_case",
       entity_id: data.caseId,
       details: {
-        status: data.status,
-        resolution: data.resolution,
+        status: dbStatus,
+        actionType: data.actionType ?? null,
+        resolution: enrichedResolution,
         role: context.role,
         finalised: isFinalise,
       },
     });
 
-    return { ok: true };
+    return { ok: true, status: dbStatus };
   });
+
+export const createDuplicateCase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      studentIds: string[];
+      reason: string;
+      matchScore?: number | undefined;
+      confidence?: string | undefined;
+      matchDetails?: Record<string, unknown> | undefined;
+      clusterId?: string | undefined;
+      initialNotes?: string | undefined;
+    }) => input,
+  )
+  .handler(async ({ data, context }) => {
+    requireStaff(context.role);
+
+    // Map reason to allowed database reason if strict
+    const allowedReasons = ["apaar_duplicate", "name_dob_match", "fuzzy_name_match"];
+    const safeReason = allowedReasons.includes(data.reason) ? data.reason : "fuzzy_name_match";
+
+    const insertPayload: Record<string, unknown> = {
+      student_ids: data.studentIds,
+      reason: safeReason,
+      status: "open",
+      resolution: data.initialNotes ?? null,
+    };
+
+    const { data: created, error } = await context.supabase
+      .from("duplicate_cases")
+      .insert(insertPayload as any)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    await context.supabase.from("audit_logs").insert({
+      user_id: context.userId,
+      action: "create",
+      entity_type: "duplicate_case",
+      entity_id: (created as any)?.id ?? "new",
+      details: {
+        student_ids: data.studentIds,
+        reason: data.reason,
+        score: data.matchScore,
+        confidence: data.confidence,
+        role: context.role,
+      },
+    });
+
+    return { ok: true, case: created };
+  });
+
+export const getDuplicateAnalytics = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    requireAuditAccess(context.role);
+
+    // 1. Fetch institution students
+    let query = context.supabase.from("students").select("*");
+    if (context.role !== "aicte_admin" && context.institutionId) {
+      query = query.eq("institution_id", context.institutionId);
+    }
+    const { data: students, error: stuErr } = await query;
+    if (stuErr) throw new Error(stuErr.message);
+
+    // 2. Fetch duplicate cases from DB
+    const { data: cases, error: caseErr } = await context.supabase
+      .from("duplicate_cases")
+      .select("*");
+    if (caseErr) throw new Error(caseErr.message);
+
+    // 3. Run candidate generation on students
+    const identityRecords: StudentIdentityRecord[] = (students ?? []).map((s) => ({
+      id: s.id,
+      studentId: s.student_id,
+      apaarId: s.apaar_id,
+      name: s.name,
+      dob: s.dob,
+      gender: s.gender,
+      contact: s.contact,
+      category: s.category,
+      programmeCode: s.programme_code,
+      admissionYear: s.admission_year,
+      institutionId: s.institution_id,
+    }));
+
+    const candidates = generateCandidatePairs(identityRecords, {
+      includeCrossInstitution: context.role === "aicte_admin",
+    });
+
+    const highConfidenceCount = candidates.filter(
+      (c) => c.match.confidence === "HIGH_CONFIDENCE",
+    ).length;
+    const reviewRecommendedCount = candidates.filter(
+      (c) => c.match.confidence === "REVIEW_RECOMMENDED",
+    ).length;
+
+    // Cases analytics
+    const caseList = cases ?? [];
+    const pendingCases = caseList.filter(
+      (c) => c.status === "open" || c.status === "under_review" || c.status === "needs_information",
+    );
+    const confirmedCases = caseList.filter(
+      (c) =>
+        c.status === "confirmed" ||
+        (c.status === "resolved" && !c.resolution?.toLowerCase().includes("not duplicate")),
+    );
+    const dismissedCases = caseList.filter(
+      (c) =>
+        c.status === "dismissed" ||
+        (c.status === "resolved" && c.resolution?.toLowerCase().includes("not duplicate")),
+    );
+
+    // Average review time
+    let totalReviewHours = 0;
+    let reviewedCount = 0;
+    for (const c of caseList) {
+      if (c.status !== "open") {
+        const diffMs =
+          new Date(c.updated_at ?? c.created_at).getTime() - new Date(c.created_at).getTime();
+        const hrs = diffMs / (1000 * 60 * 60);
+        if (hrs >= 0) {
+          totalReviewHours += hrs;
+          reviewedCount++;
+        }
+      }
+    }
+    const avgReviewTimeHours =
+      reviewedCount > 0 ? Math.round((totalReviewHours / reviewedCount) * 10) / 10 : null;
+
+    // Common conflict fields
+    const conflictFieldCounts: Record<string, number> = {};
+    for (const c of candidates) {
+      for (const conf of c.match.conflictingAttributes) {
+        const key = conf.split(":")[0]?.trim() || conf;
+        conflictFieldCounts[key] = (conflictFieldCounts[key] ?? 0) + 1;
+      }
+    }
+
+    const topConflictFields = Object.entries(conflictFieldCounts)
+      .map(([field, count]) => ({ field, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      totalCandidates: candidates.length,
+      highConfidenceCount,
+      reviewRecommendedCount,
+      pendingCount: pendingCases.length,
+      confirmedCount: confirmedCases.length,
+      dismissedCount: dismissedCases.length,
+      avgReviewTimeHours,
+      topConflictFields,
+    };
+  });
+
+export const duplicateAnalyticsQueryOptions = queryOptions({
+  queryKey: ["duplicate-analytics"],
+  queryFn: () => getDuplicateAnalytics(),
+});
 
 // ── Audit Logs ────────────────────────────────────────────────────────────
 
