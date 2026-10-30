@@ -19,6 +19,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDuplicatesRouteImport } from './routes/_authenticated/duplicates'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
 import { Route as AuthenticatedInstitutionsRouteImport } from './routes/_authenticated/institutions'
+import { Route as AuthenticatedIntelligenceRouteImport } from './routes/_authenticated/intelligence'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedProgrammesRouteImport } from './routes/_authenticated/programmes'
 import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated/students'
@@ -82,6 +83,12 @@ const AuthenticatedInstitutionsRoute =
   AuthenticatedInstitutionsRouteImport.update({
     id: '/institutions',
     path: '/institutions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIntelligenceRoute =
+  AuthenticatedIntelligenceRouteImport.update({
+    id: '/intelligence',
+    path: '/intelligence',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
@@ -162,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/duplicates': typeof AuthenticatedDuplicatesRoute
   '/import': typeof AuthenticatedImportRoute
   '/institutions': typeof AuthenticatedInstitutionsRoute
+  '/intelligence': typeof AuthenticatedIntelligenceRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/programmes': typeof AuthenticatedProgrammesRoute
   '/students': typeof AuthenticatedStudentsRoute
@@ -185,6 +193,7 @@ export interface FileRoutesByTo {
   '/duplicates': typeof AuthenticatedDuplicatesRoute
   '/import': typeof AuthenticatedImportRoute
   '/institutions': typeof AuthenticatedInstitutionsRoute
+  '/intelligence': typeof AuthenticatedIntelligenceRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/programmes': typeof AuthenticatedProgrammesRoute
   '/students': typeof AuthenticatedStudentsRoute
@@ -211,6 +220,7 @@ export interface FileRoutesById {
   '/_authenticated/duplicates': typeof AuthenticatedDuplicatesRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/institutions': typeof AuthenticatedInstitutionsRoute
+  '/_authenticated/intelligence': typeof AuthenticatedIntelligenceRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/programmes': typeof AuthenticatedProgrammesRoute
   '/_authenticated/students': typeof AuthenticatedStudentsRoute
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/duplicates'
     | '/import'
     | '/institutions'
+    | '/intelligence'
     | '/profile'
     | '/programmes'
     | '/students'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/duplicates'
     | '/import'
     | '/institutions'
+    | '/intelligence'
     | '/profile'
     | '/programmes'
     | '/students'
@@ -285,6 +297,7 @@ export interface FileRouteTypes {
     | '/_authenticated/duplicates'
     | '/_authenticated/import'
     | '/_authenticated/institutions'
+    | '/_authenticated/intelligence'
     | '/_authenticated/profile'
     | '/_authenticated/programmes'
     | '/_authenticated/students'
@@ -377,6 +390,13 @@ declare module '@tanstack/react-router' {
       path: '/institutions'
       fullPath: '/institutions'
       preLoaderRoute: typeof AuthenticatedInstitutionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/intelligence': {
+      id: '/_authenticated/intelligence'
+      path: '/intelligence'
+      fullPath: '/intelligence'
+      preLoaderRoute: typeof AuthenticatedIntelligenceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/profile': {
@@ -480,6 +500,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDuplicatesRoute: typeof AuthenticatedDuplicatesRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedInstitutionsRoute: typeof AuthenticatedInstitutionsRoute
+  AuthenticatedIntelligenceRoute: typeof AuthenticatedIntelligenceRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedProgrammesRoute: typeof AuthenticatedProgrammesRoute
   AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRoute
@@ -492,6 +513,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDuplicatesRoute: AuthenticatedDuplicatesRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedInstitutionsRoute: AuthenticatedInstitutionsRoute,
+  AuthenticatedIntelligenceRoute: AuthenticatedIntelligenceRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedProgrammesRoute: AuthenticatedProgrammesRoute,
   AuthenticatedStudentsRoute: AuthenticatedStudentsRoute,

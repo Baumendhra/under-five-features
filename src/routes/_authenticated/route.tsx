@@ -32,6 +32,11 @@ type NavItem = { to: string; label: string; roles: Role[] | "all" };
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", roles: "all" },
+  {
+    to: "/intelligence",
+    label: "Intelligence Hub",
+    roles: ["aicte_admin", "institution_admin", "officer"],
+  },
   { to: "/students", label: "Students", roles: ["aicte_admin", "institution_admin", "officer"] },
   { to: "/profile", label: "My Profile", roles: ["student"] },
   { to: "/import", label: "Import", roles: ["aicte_admin", "institution_admin", "officer"] },
