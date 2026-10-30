@@ -32,11 +32,11 @@ FOR SELECT
 TO authenticated
 USING (
     institution_id IN (
-        SELECT institution_id FROM public.user_profiles WHERE user_id = auth.uid()
+        SELECT institution_id FROM public.user_profiles WHERE id = auth.uid()
     )
     OR EXISTS (
         SELECT 1 FROM public.user_profiles
-        WHERE user_id = auth.uid() AND role = 'aicte_admin'
+        WHERE id = auth.uid() AND role = 'aicte_admin'
     )
 );
 
@@ -48,11 +48,11 @@ FOR INSERT
 TO authenticated
 WITH CHECK (
     institution_id IN (
-        SELECT institution_id FROM public.user_profiles WHERE user_id = auth.uid()
+        SELECT institution_id FROM public.user_profiles WHERE id = auth.uid()
     )
     OR EXISTS (
         SELECT 1 FROM public.user_profiles
-        WHERE user_id = auth.uid() AND role = 'aicte_admin'
+        WHERE id = auth.uid() AND role = 'aicte_admin'
     )
 );
 
@@ -95,11 +95,11 @@ FOR SELECT
 TO authenticated
 USING (
     institution_id IN (
-        SELECT institution_id FROM public.user_profiles WHERE user_id = auth.uid()
+        SELECT institution_id FROM public.user_profiles WHERE id = auth.uid()
     )
     OR EXISTS (
         SELECT 1 FROM public.user_profiles
-        WHERE user_id = auth.uid() AND role = 'aicte_admin'
+        WHERE id = auth.uid() AND role = 'aicte_admin'
     )
 );
 
@@ -111,11 +111,10 @@ FOR INSERT
 TO authenticated
 WITH CHECK (
     institution_id IN (
-        SELECT institution_id FROM public.user_profiles WHERE user_id = auth.uid()
+        SELECT institution_id FROM public.user_profiles WHERE id = auth.uid()
     )
     OR EXISTS (
         SELECT 1 FROM public.user_profiles
-        WHERE user_id = auth.uid() AND role = 'aicte_admin'
+        WHERE id = auth.uid() AND role = 'aicte_admin'
     )
 );
-

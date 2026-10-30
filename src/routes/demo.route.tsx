@@ -31,17 +31,32 @@ const NAV_ITEMS = [
     roles: ["aicte_admin", "institution_admin", "officer", "student"],
   },
   {
+    to: "/demo/intelligence",
+    label: "Intelligence Hub",
+    roles: ["aicte_admin", "institution_admin", "officer"],
+  },
+  {
     to: "/demo/students",
     label: "Students",
     roles: ["aicte_admin", "institution_admin", "officer", "student"],
   },
-  { to: "/demo/import", label: "Import", roles: ["aicte_admin", "institution_admin", "officer"] },
-  { to: "/demo/institutions", label: "Institutions", roles: ["aicte_admin"] },
+  {
+    to: "/demo/programmes",
+    label: "Programmes",
+    roles: ["aicte_admin", "institution_admin", "officer"],
+  },
+  {
+    to: "/demo/corrections",
+    label: "Corrections",
+    roles: ["aicte_admin", "institution_admin", "officer", "student"],
+  },
   {
     to: "/demo/duplicates",
     label: "Duplicates",
     roles: ["aicte_admin", "institution_admin", "officer"],
   },
+  { to: "/demo/import", label: "Import", roles: ["aicte_admin", "institution_admin", "officer"] },
+  { to: "/demo/institutions", label: "Institutions", roles: ["aicte_admin"] },
   { to: "/demo/audit", label: "Audit", roles: ["aicte_admin", "institution_admin", "officer"] },
 ] as const;
 
