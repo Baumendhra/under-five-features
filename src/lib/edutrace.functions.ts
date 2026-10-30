@@ -248,7 +248,7 @@ export const getDashboardStats = createServerFn({ method: "GET" })
     }
 
     // Duplicate cases – scoped for institution users
-    let dupQuery = context.supabase
+    const dupQuery = context.supabase
       .from("duplicate_cases")
       .select("*", { count: "exact", head: true })
       .eq("status", "open");

@@ -6,12 +6,19 @@
 -- ============================================================
 
 -- ── 1. Drop ALL existing policies on user_profiles ────────────
+DROP POLICY IF EXISTS "Users can view own profile"                 ON public.user_profiles;
 DROP POLICY IF EXISTS "Users can view their own profile"           ON public.user_profiles;
 DROP POLICY IF EXISTS "Users can update own profile"               ON public.user_profiles;
 DROP POLICY IF EXISTS "Users update own non-role profile fields"   ON public.user_profiles;
 DROP POLICY IF EXISTS "aicte_admin manages profiles"               ON public.user_profiles;
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone"   ON public.user_profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile"         ON public.user_profiles;
+DROP POLICY IF EXISTS "user_profiles: owner select"                ON public.user_profiles;
+DROP POLICY IF EXISTS "user_profiles: aicte_admin select all"      ON public.user_profiles;
+DROP POLICY IF EXISTS "user_profiles: owner insert"                ON public.user_profiles;
+DROP POLICY IF EXISTS "user_profiles: owner update"                ON public.user_profiles;
+DROP POLICY IF EXISTS "user_profiles: aicte_admin update all"      ON public.user_profiles;
+DROP POLICY IF EXISTS "user_profiles: aicte_admin delete"          ON public.user_profiles;
 
 -- ── 2. Create a SECURITY DEFINER helper that reads role ────────
 -- This runs as the function owner (bypasses RLS), so it cannot

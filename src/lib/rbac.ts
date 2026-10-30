@@ -41,6 +41,10 @@ export function requireStaff(role: string): void {
   requireRole(role, STAFF_ROLES, "perform staff operations");
 }
 
+export type FilterableQuery<T> = T & {
+  eq: (column: string, value: unknown) => T;
+};
+
 /**
  * Returns a Supabase `.eq()` / `.or()` scope string that restricts
  * a student query to rows the caller is authorised to see.
@@ -49,21 +53,21 @@ export function requireStaff(role: string): void {
  * and returns the modified builder.
  */
 export function applyStudentScope<T>(
-  query: T & { eq: (...args: any[]) => T },
+  query: FilterableQuery<T>,
   role: string,
   userId: string,
   institutionId: string | null,
-): T {
+): FilterableQuery<T> {
   if (role === "aicte_admin") {
     // Can see all rows
     return query;
   }
   if (institutionId) {
     // institution_admin / officer: own institution
-    return (query as any).eq("institution_id", institutionId) as T;
+    return query.eq("institution_id", institutionId) as FilterableQuery<T>;
   }
   // Student / fallback: own rows only
-  return (query as any).eq("user_id", userId) as T;
+  return query.eq("user_id", userId) as FilterableQuery<T>;
 }
 
 /**

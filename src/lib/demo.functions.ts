@@ -13,7 +13,9 @@ let DEMO_STUDENTS: StudentRecord[] = (() => {
     try {
       const stored = localStorage.getItem("demoStudents");
       if (stored) return JSON.parse(stored) as StudentRecord[];
-    } catch {}
+    } catch {
+      /* ignore */
+    }
   }
   // Default static demo data
   return [
@@ -84,11 +86,13 @@ function persistDemoStudents() {
   if (typeof window !== "undefined") {
     try {
       localStorage.setItem("demoStudents", JSON.stringify(DEMO_STUDENTS));
-    } catch {}
+    } catch {
+      /* ignore */
+    }
   }
 }
 
-/** Returns the demo student list – no DB involved. */
+/** Returns the demo student list - no DB involved. */
 export const getDemoStudents = createServerFn({ method: "GET" }).handler(async () => {
   // simulate async latency
   await new Promise((r) => setTimeout(r, 200));
@@ -114,7 +118,7 @@ export const exportDemoCsv = createServerFn({ method: "GET" }).handler(async () 
   ];
   const maskApaar = (raw: string | null) => {
     if (!raw) return "";
-    const cleaned = raw.replace(/[\\s-]/g, "");
+    const cleaned = raw.replace(/[\s-]/g, "");
     if (cleaned.length < 6) return cleaned;
     return cleaned.slice(0, 4) + "••••" + cleaned.slice(-4);
   };
@@ -124,13 +128,12 @@ export const exportDemoCsv = createServerFn({ method: "GET" }).handler(async () 
       maskApaar(r.apaar_id),
       r.name,
       r.dob ?? "",
-      // @ts-ignore – extra fields may be undefined in the type
-      (r as any).gender ?? "",
+      r.gender ?? "",
       r.category ?? "",
       r.programme_code ?? "",
       r.intake_type ?? "",
       r.contact ?? "",
-      (r as any).apaar_verify_status ?? "pending",
+      r.apaar_verify_status ?? "pending",
       r.current_status ?? "active",
       r.created_at?.slice(0, 10) ?? "",
     ]

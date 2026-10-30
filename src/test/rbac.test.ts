@@ -199,9 +199,14 @@ describe("requireOwnerOrStaff", () => {
 // ── applyStudentScope ─────────────────────────────────────────────────────
 
 describe("applyStudentScope", () => {
-  function makeQuery() {
+  interface MockQuery {
+    eq: (column: string, value: unknown) => MockQuery;
+    _calls: { method: string; args: unknown[] }[];
+  }
+
+  function makeQuery(): MockQuery {
     const calls: { method: string; args: unknown[] }[] = [];
-    const query = {
+    const query: MockQuery = {
       eq: (...args: unknown[]) => {
         calls.push({ method: "eq", args });
         return query;
@@ -213,34 +218,34 @@ describe("applyStudentScope", () => {
 
   it("does not apply any filter for aicte_admin", () => {
     const q = makeQuery();
-    applyStudentScope(q as any, "aicte_admin", "u1", "inst-1");
+    applyStudentScope(q, "aicte_admin", "u1", "inst-1");
     expect(q._calls).toHaveLength(0);
   });
 
   it("scopes by institution_id for institution_admin with institution", () => {
     const q = makeQuery();
-    applyStudentScope(q as any, "institution_admin", "u1", "inst-abc");
+    applyStudentScope(q, "institution_admin", "u1", "inst-abc");
     expect(q._calls).toHaveLength(1);
     expect(q._calls[0]).toEqual({ method: "eq", args: ["institution_id", "inst-abc"] });
   });
 
   it("scopes by institution_id for officer with institution", () => {
     const q = makeQuery();
-    applyStudentScope(q as any, "officer", "u1", "inst-xyz");
+    applyStudentScope(q, "officer", "u1", "inst-xyz");
     expect(q._calls).toHaveLength(1);
     expect(q._calls[0]).toEqual({ method: "eq", args: ["institution_id", "inst-xyz"] });
   });
 
   it("scopes by user_id when no institution_id (student / fallback)", () => {
     const q = makeQuery();
-    applyStudentScope(q as any, "student", "user-abc", null);
+    applyStudentScope(q, "student", "user-abc", null);
     expect(q._calls).toHaveLength(1);
     expect(q._calls[0]).toEqual({ method: "eq", args: ["user_id", "user-abc"] });
   });
 
   it("scopes by user_id for institution_admin with no institution_id set", () => {
     const q = makeQuery();
-    applyStudentScope(q as any, "institution_admin", "u1", null);
+    applyStudentScope(q, "institution_admin", "u1", null);
     expect(q._calls).toHaveLength(1);
     expect(q._calls[0]).toEqual({ method: "eq", args: ["user_id", "u1"] });
   });
