@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { dashboardStatsQueryOptions, studentsQueryOptions } from "@/lib/students.functions";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   BarChart,
   Bar,
@@ -15,12 +16,18 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   CartesianGrid,
   Legend,
 } from "recharts";
 import { apaarStatus } from "@/lib/student-import";
+import {
+  evaluateStudentRecord,
+  aggregateInstitutionQuality,
+  classifyQualityBand,
+  QUALITY_BAND_CONFIG,
+} from "@/lib/data-quality";
+import { ShieldCheck, AlertTriangle, AlertOctagon, Info, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Re-export studentsQueryOptions for the loader
 export { studentsQueryOptions };
@@ -83,6 +90,53 @@ function Dashboard() {
   const { isStudent } = useUserProfile();
   const { data: students } = useSuspenseQuery(studentsQueryOptions);
 
+  // Quality calculations
+  const qualitySummary = useMemo(() => {
+    const reports = students.map((s) =>
+      evaluateStudentRecord({
+        id: s.id,
+        studentId: s.student_id,
+        apaarId: s.apaar_id,
+        name: s.name,
+        dob: s.dob,
+        programmeCode: s.programme_code,
+        category: s.category,
+        intakeType: s.intake_type,
+        contact: s.contact,
+        gender: s.gender,
+        admissionYear: s.admission_year,
+        apaarVerifyStatus: s.apaar_verify_status,
+        institutionId: s.institution_id,
+      }),
+    );
+    return aggregateInstitutionQuality(reports);
+  }, [students]);
+
+  const studentReportsMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof evaluateStudentRecord>>();
+    for (const s of students) {
+      map.set(
+        s.id,
+        evaluateStudentRecord({
+          id: s.id,
+          studentId: s.student_id,
+          apaarId: s.apaar_id,
+          name: s.name,
+          dob: s.dob,
+          programmeCode: s.programme_code,
+          category: s.category,
+          intakeType: s.intake_type,
+          contact: s.contact,
+          gender: s.gender,
+          admissionYear: s.admission_year,
+          apaarVerifyStatus: s.apaar_verify_status,
+          institutionId: s.institution_id,
+        }),
+      );
+    }
+    return map;
+  }, [students]);
+
   // Staff / admin dashboard — existing rich view below
   const verified = students.filter((s) => apaarStatus(s.apaar_id) === "verified").length;
   const missing = students.filter((s) => apaarStatus(s.apaar_id) === "missing").length;
@@ -136,33 +190,146 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Stat cards */}
+      {/* Primary Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total students" value={students.length} icon="👥" />
         <StatCard
-          label="APAAR verified"
-          value={`${verified} (${verifiedPct}%)`}
-          hint="12-digit ID confirmed"
-          accent="green"
-          icon="✅"
+          label="Data Quality Score"
+          value={`${qualitySummary.averageScore}/100`}
+          hint={`${QUALITY_BAND_CONFIG[classifyQualityBand(qualitySummary.averageScore)].label} · Institutional baseline`}
+          accent={
+            qualitySummary.averageScore >= 90
+              ? "green"
+              : qualitySummary.averageScore >= 75
+                ? "blue"
+                : qualitySummary.averageScore >= 50
+                  ? "yellow"
+                  : "red"
+          }
+          icon="🛡️"
         />
         <StatCard
-          label="Missing APAAR"
-          value={missing}
-          hint="Flagged for follow-up"
-          accent="yellow"
+          label="Registry Health"
+          value={`${qualitySummary.averageCompleteness}%`}
+          hint={`${qualitySummary.averageValidity}% format & syntax valid`}
+          accent="blue"
+          icon="📊"
+        />
+        <StatCard
+          label="Attention Needed"
+          value={qualitySummary.attentionNeededCount}
+          hint={`${qualitySummary.priorityDistribution.critical} critical · ${qualitySummary.priorityDistribution.high} high priority`}
+          accent={qualitySummary.attentionNeededCount > 0 ? "yellow" : "green"}
           icon="⚠️"
-        />
-        <StatCard
-          label="Invalid APAAR"
-          value={invalid}
-          hint="Format error — needs correction"
-          accent="red"
-          icon="❌"
         />
       </div>
 
-      {/* Charts row */}
+      {/* Institutional Quality & Compliance Section */}
+      {students.length > 0 && (
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Quality Bands Distribution */}
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-lg text-foreground">Quality Score Distribution</h2>
+              <Badge variant="outline" className="text-xs">
+                {students.length} records
+              </Badge>
+            </div>
+            <div className="space-y-3">
+              {[
+                { band: "excellent" as const, count: qualitySummary.qualityBands.excellent },
+                { band: "good" as const, count: qualitySummary.qualityBands.good },
+                {
+                  band: "needs_improvement" as const,
+                  count: qualitySummary.qualityBands.needsImprovement,
+                },
+                { band: "critical" as const, count: qualitySummary.qualityBands.critical },
+              ].map(({ band, count }) => {
+                const config = QUALITY_BAND_CONFIG[band];
+                const pct = students.length > 0 ? Math.round((count / students.length) * 100) : 0;
+                return (
+                  <div key={band} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium flex items-center gap-1.5">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: config.color }}
+                        />
+                        {config.label}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {count.toLocaleString()} ({pct}%)
+                      </span>
+                    </div>
+                    <Progress value={pct} className="h-1.5" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Top Data Quality Issues */}
+          <div className="rounded-xl border border-border bg-card p-5 lg:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-display text-lg text-foreground">
+                  Top Data Quality Discrepancies
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Most frequent defects requiring institutional correction
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm" className="h-8 text-xs gap-1">
+                <Link to="/students">
+                  Triage in Registry <ArrowRight className="h-3 w-3" />
+                </Link>
+              </Button>
+            </div>
+
+            {qualitySummary.frequentIssues.length === 0 ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-6 text-center text-xs text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
+                ✓ No widespread data quality defects detected across the active student cohort.
+              </div>
+            ) : (
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                {qualitySummary.frequentIssues.slice(0, 6).map((issue, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start justify-between gap-2 rounded-lg border border-border bg-muted/20 p-2.5 text-xs"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-foreground">{issue.title}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">Field: {issue.field}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] capitalize",
+                          issue.severity === "critical"
+                            ? "border-rose-300 text-rose-700 dark:text-rose-400"
+                            : issue.severity === "high"
+                              ? "border-amber-300 text-amber-700 dark:text-amber-400"
+                              : "border-border text-muted-foreground",
+                        )}
+                      >
+                        {issue.severity}
+                      </Badge>
+                      <span className="text-[11px] font-bold text-foreground">
+                        {issue.count} record{issue.count !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Secondary Charts row */}
       {students.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* APAAR pie */}
@@ -274,40 +441,58 @@ function Dashboard() {
           </div>
         ) : (
           <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-card">
-            {recent.map((student) => (
-              <li key={student.id} className="flex items-center justify-between gap-4 px-5 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{student.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {student.programme_code ?? "—"} · {student.dob ?? "no DOB"} ·{" "}
-                    {student.category ?? "—"}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {student.intake_type && (
-                    <Badge variant="outline" className="text-xs">
-                      {student.intake_type}
-                    </Badge>
-                  )}
-                  <Badge
-                    variant="secondary"
-                    className={
-                      apaarStatus(student.apaar_id) === "verified"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+            {recent.map((student) => {
+              const rep = studentReportsMap.get(student.id);
+              const bandConfig = rep ? QUALITY_BAND_CONFIG[rep.band] : null;
+
+              return (
+                <li key={student.id} className="flex items-center justify-between gap-4 px-5 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{student.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {student.programme_code ?? "—"} · {student.dob ?? "no DOB"} ·{" "}
+                      {student.category ?? "—"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {student.intake_type && (
+                      <Badge variant="outline" className="text-xs">
+                        {student.intake_type}
+                      </Badge>
+                    )}
+                    {rep && bandConfig && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[11px] font-medium",
+                          bandConfig.badgeBg,
+                          bandConfig.badgeText,
+                          bandConfig.border,
+                        )}
+                      >
+                        {rep.overallScore}/100 · {bandConfig.label}
+                      </Badge>
+                    )}
+                    <Badge
+                      variant="secondary"
+                      className={
+                        apaarStatus(student.apaar_id) === "verified"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : apaarStatus(student.apaar_id) === "missing"
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                      }
+                    >
+                      {apaarStatus(student.apaar_id) === "verified"
+                        ? `✓ ${student.apaar_id}`
                         : apaarStatus(student.apaar_id) === "missing"
-                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                    }
-                  >
-                    {apaarStatus(student.apaar_id) === "verified"
-                      ? `✓ ${student.apaar_id}`
-                      : apaarStatus(student.apaar_id) === "missing"
-                        ? "No APAAR"
-                        : "Bad APAAR"}
-                  </Badge>
-                </div>
-              </li>
-            ))}
+                          ? "No APAAR"
+                          : "Bad APAAR"}
+                    </Badge>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
