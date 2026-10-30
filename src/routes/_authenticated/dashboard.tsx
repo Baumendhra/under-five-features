@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { dashboardStatsQueryOptions, studentsQueryOptions } from "@/lib/students.functions";
+import { correctionAnalyticsQueryOptions } from "@/lib/correction-requests.functions";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,17 @@ import {
   classifyQualityBand,
   QUALITY_BAND_CONFIG,
 } from "@/lib/data-quality";
-import { ShieldCheck, AlertTriangle, AlertOctagon, Info, ArrowRight } from "lucide-react";
+import {
+  ShieldCheck,
+  AlertTriangle,
+  AlertOctagon,
+  Info,
+  ArrowRight,
+  GitPullRequest,
+  Clock,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Re-export studentsQueryOptions for the loader
@@ -89,6 +100,7 @@ function StatCard({
 function Dashboard() {
   const { isStudent } = useUserProfile();
   const { data: students } = useSuspenseQuery(studentsQueryOptions);
+  const { data: correctionAnalytics } = useQuery(correctionAnalyticsQueryOptions);
 
   // Quality calculations
   const qualitySummary = useMemo(() => {
@@ -326,6 +338,119 @@ function Dashboard() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Discrepancy Resolution & Correction Workflow Analytics */}
+      {correctionAnalytics && (
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <GitPullRequest className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-lg text-foreground">
+                  Correction Workflow & Resolution SLA
+                </h2>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Automated tracking of student discrepancy correction requests, approvals, and
+                response times
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+              <Link to="/corrections">
+                Correction Centre <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg border border-border bg-muted/20 p-3.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Pending Review</span>
+                <Clock className="h-4 w-4 text-amber-500" />
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="font-display text-2xl text-foreground">
+                  {correctionAnalytics.pendingCount}
+                </span>
+                {correctionAnalytics.overdueCount > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="border-rose-300 text-[10px] text-rose-600 dark:text-rose-400"
+                  >
+                    {correctionAnalytics.overdueCount} overdue &gt;48h
+                  </Badge>
+                )}
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Awaiting officer review or verification
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-muted/20 p-3.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Avg Resolution Time</span>
+                <Clock className="h-4 w-4 text-blue-500" />
+              </div>
+              <div className="mt-2 font-display text-2xl text-foreground">
+                {correctionAnalytics.avgResolutionHours !== null
+                  ? `${correctionAnalytics.avgResolutionHours} hrs`
+                  : "—"}
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Target resolution window: 48 hours
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-muted/20 p-3.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Approved & Applied</span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              </div>
+              <div className="mt-2 font-display text-2xl text-foreground">
+                {correctionAnalytics.approvedCount}
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Synchronized directly to student registry
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border bg-muted/20 p-3.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Rejected / Closed</span>
+                <XCircle className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="mt-2 font-display text-2xl text-foreground">
+                {correctionAnalytics.rejectedCount}
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                With audit reason logged &amp; student notified
+              </p>
+            </div>
+          </div>
+
+          {correctionAnalytics.topFields.length > 0 && (
+            <div className="pt-2 border-t border-border/60">
+              <span className="text-xs font-medium text-muted-foreground">
+                Top Corrected Fields:{" "}
+              </span>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {correctionAnalytics.topFields.map((item) => (
+                  <Badge
+                    key={item.field}
+                    variant="secondary"
+                    className="text-[11px] font-normal gap-1"
+                  >
+                    <span className="font-mono capitalize">{item.field.replace(/_/g, " ")}</span>
+                    <span className="rounded-full bg-background px-1.5 py-0.2 text-[10px] font-bold">
+                      {item.count}
+                    </span>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
