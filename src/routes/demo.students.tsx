@@ -8,6 +8,7 @@ import {
   batchVerifyDemoStudents,
   singleVerifyDemoStudent,
 } from "@/lib/demo.functions";
+import { useDemoRole } from "@/lib/demo-role-store";
 import { evaluateStudentRecord, type StudentQualityEvaluation } from "@/lib/data-quality";
 import { validateLocalApaar, type LocalApaarValidationResult } from "@/lib/apaar-orchestrator";
 import { useUserProfile } from "@/hooks/use-user-profile";
@@ -123,7 +124,9 @@ function QualityBadge({
 
 function DemoStudents() {
   const queryClient = useQueryClient();
+  const [currentRole, setRole] = useDemoRole();
   const { canExport, canImportStudents, canVerifyApaar } = useUserProfile();
+
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["demo-students"],
     queryFn: () => getDemoStudents(),
@@ -154,6 +157,35 @@ function DemoStudents() {
     verified: number;
     failed: number;
   } | null>(null);
+
+  if (currentRole === "student") {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-8 text-center space-y-4 my-8">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800 text-2xl">
+          🛡️
+        </div>
+        <div className="space-y-1">
+          <h2 className="font-display text-xl font-bold text-amber-950">
+            Role Boundary: Full Student Registry
+          </h2>
+          <p className="max-w-md mx-auto text-xs text-amber-900 leading-relaxed">
+            As an enrolled <strong>Student</strong>, your access is focused on your personal
+            academic profile, APAAR verification status, and data correction requests. Full registry
+            browsing and batch verification operations are reserved for Officers and Institution
+            Admins.
+          </p>
+        </div>
+        <div className="flex justify-center gap-3 pt-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/demo/dashboard">← Return to My Student Portal</Link>
+          </Button>
+          <Button size="sm" onClick={() => setRole("officer")}>
+            Switch to Officer Scrutiny →
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Precompute quality for each student
   const studentsWithQuality = students.map((s) => ({

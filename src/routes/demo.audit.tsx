@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useDemoRole } from "@/lib/demo-role-store";
 import {
   Table,
   TableBody,
@@ -78,7 +80,36 @@ const ACTION_COLOR: Record<string, string> = {
 };
 
 function DemoAudit() {
+  const [currentRole, setRole] = useDemoRole();
   const [search, setSearch] = useState("");
+
+  if (currentRole === "student") {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-8 text-center space-y-4 my-8">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800 text-2xl">
+          🛡️
+        </div>
+        <div className="space-y-1">
+          <h2 className="font-display text-xl font-bold text-amber-950">
+            Role Boundary: Institutional Audit Trail
+          </h2>
+          <p className="max-w-md mx-auto text-xs text-amber-900 leading-relaxed">
+            As an enrolled <strong>Student</strong>, your access is focused on your personal
+            academic profile, APAAR verification status, and data correction requests. System audit
+            logs and administrative tracking are reserved for Officers and Administrators.
+          </p>
+        </div>
+        <div className="flex justify-center gap-3 pt-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/demo/dashboard">← Return to My Student Portal</Link>
+          </Button>
+          <Button size="sm" onClick={() => setRole("officer")}>
+            Switch to Officer Scrutiny →
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const filtered = DEMO_LOGS.filter((l) =>
     [l.action, l.entity_type, l.entity_id, JSON.stringify(l.details)].some((f) =>

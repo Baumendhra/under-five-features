@@ -7,6 +7,7 @@ import {
   generateDemoReport,
   resetDemoSandboxData,
 } from "@/lib/demo.functions";
+import { useDemoRole } from "@/lib/demo-role-store";
 import type { InstitutionalReportType, InstitutionalAIResponse } from "@/lib/institutional-ai";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,7 @@ const REPORT_TYPE_LABELS: Record<InstitutionalReportType, string> = {
 
 function DemoIntelligencePage() {
   const queryClient = useQueryClient();
+  const [currentRole, setRole] = useDemoRole();
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["demo-institutional-intelligence"],
@@ -96,6 +98,35 @@ function DemoIntelligencePage() {
 
   // Feedback State
   const [feedbackRecorded, setFeedbackRecorded] = useState<Record<string, string>>({});
+
+  if (currentRole === "student") {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-8 text-center space-y-4 my-8">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800 text-2xl">
+          🛡️
+        </div>
+        <div className="space-y-1">
+          <h2 className="font-display text-xl font-bold text-amber-950">
+            Role Boundary: Institutional Intelligence Hub
+          </h2>
+          <p className="max-w-md mx-auto text-xs text-amber-900 leading-relaxed">
+            As an enrolled <strong>Student</strong>, your access is focused on your personal
+            academic profile, APAAR verification status, and data correction requests. The
+            Institutional Intelligence Hub and AI Decision Assistant are restricted to Officers and
+            Institution Admins.
+          </p>
+        </div>
+        <div className="flex justify-center gap-3 pt-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/demo/dashboard">← Return to My Student Portal</Link>
+          </Button>
+          <Button size="sm" onClick={() => setRole("institution_admin")}>
+            Switch to Institution Admin →
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Handlers
   async function handleAskAssistant(qToAsk?: string) {

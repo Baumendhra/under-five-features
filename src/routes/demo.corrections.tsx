@@ -8,15 +8,8 @@ import {
   getDemoStudents,
   type DemoCorrectionRequest,
 } from "@/lib/demo.functions";
-import {
-  CORRECTION_STATUS_CONFIG,
-  generateSmartSuggestions,
-  detectCorrectionConflicts,
-  type CorrectionStatus,
-  type CorrectableFieldName,
-} from "@/lib/correction-engine";
+import { useDemoRole, useDemoActiveStudent } from "@/lib/demo-role-store";
 import { maskApaar, maskContact } from "@/lib/data-quality";
-import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,7 +51,12 @@ export const Route = createFileRoute("/demo/corrections")({
 
 function DemoCorrectionsPage() {
   const queryClient = useQueryClient();
-  const { role, isAicteAdmin, isInstitutionAdmin, isOfficer } = useUserProfile();
+  const [currentRole, setRole] = useDemoRole();
+  const [activeStudentId, setActiveStudentId] = useDemoActiveStudent();
+
+  const isStudent = currentRole === "student";
+  const isOfficer = currentRole === "officer";
+  const isAdmin = currentRole === "institution_admin" || currentRole === "aicte_admin";
 
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ["demo-corrections"],
@@ -70,6 +68,11 @@ function DemoCorrectionsPage() {
     queryFn: () => getDemoStudents(),
   });
 
+  const activeStudent =
+    students.find((s) => s.id === activeStudentId) ??
+    students.find((s) => s.id === "demo-3") ??
+    students[0];
+
   const [activeTab, setActiveTab] = useState<
     "all" | "pending" | "in_review" | "approved" | "rejected"
   >("pending");
@@ -80,7 +83,7 @@ function DemoCorrectionsPage() {
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
 
   // New correction form state
-  const [newStudentId, setNewStudentId] = useState("");
+  const [newStudentId, setNewStudentId] = useState(activeStudent?.id ?? "");
   const [newField, setNewField] = useState<
     "name" | "dob" | "apaar_id" | "contact" | "category" | "programme_code"
   >("apaar_id");
@@ -111,9 +114,19 @@ function DemoCorrectionsPage() {
     };
   }
 
-  // Filter requests
+  // Filter requests based on role
+  const relevantRequests = useMemo(() => {
+    if (isStudent && activeStudent) {
+      // Student only sees their own requests
+      return requests.filter(
+        (r) => r.student_id === activeStudent.id || r.student_name === activeStudent.name,
+      );
+    }
+    return requests;
+  }, [requests, isStudent, activeStudent]);
+
   const filteredRequests = useMemo(() => {
-    let result = requests;
+    let result = relevantRequests;
 
     if (activeTab === "pending") {
       result = result.filter((r) => r.status === "pending");
@@ -137,17 +150,17 @@ function DemoCorrectionsPage() {
     }
 
     return result;
-  }, [requests, activeTab, search]);
+  }, [relevantRequests, activeTab, search]);
 
   // Analytics summary
-  const totalCount = requests.length;
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
-  const inReviewCount = requests.filter(
+  const totalCount = relevantRequests.length;
+  const pendingCount = relevantRequests.filter((r) => r.status === "pending").length;
+  const inReviewCount = relevantRequests.filter(
     (r) => r.status === "in_review" || r.status === "more_info_required",
   ).length;
-  const approvedCount = requests.filter((r) => r.status === "approved").length;
-  const rejectedCount = requests.filter((r) => r.status === "rejected").length;
-  const breachedCount = requests.filter((r) => {
+  const approvedCount = relevantRequests.filter((r) => r.status === "approved").length;
+  const rejectedCount = relevantRequests.filter((r) => r.status === "rejected").length;
+  const breachedCount = relevantRequests.filter((r) => {
     const sla = getSlaStatus(r.sla_deadline, r.status);
     return sla?.isBreached;
   }).length;
@@ -190,12 +203,14 @@ function DemoCorrectionsPage() {
 
   async function handleCreateNewCorrection(e: React.FormEvent) {
     e.preventDefault();
-    if (!newStudentId || !newRequestedValue.trim() || !newReason.trim()) {
+    const targetStudentId = isStudent ? activeStudent?.id : newStudentId;
+
+    if (!targetStudentId || !newRequestedValue.trim() || !newReason.trim()) {
       toast.error("Please fill in all required fields.");
       return;
     }
 
-    const st = students.find((s) => s.id === newStudentId);
+    const st = students.find((s) => s.id === targetStudentId);
     if (!st) return;
 
     const currVal = String((st as any)[newField] ?? "");
@@ -217,7 +232,6 @@ function DemoCorrectionsPage() {
       await queryClient.invalidateQueries({ queryKey: ["demo-corrections"] });
       toast.success(`Correction requested for ${st.name}.`);
       setIsNewDialogOpen(false);
-      setNewStudentId("");
       setNewRequestedValue("");
       setNewReason("");
     } catch {
@@ -226,22 +240,79 @@ function DemoCorrectionsPage() {
   }
 
   if (isLoading) {
-    return <p className="text-muted-foreground p-8 text-center">Loading Demo Correction Centre…</p>;
+    return <p className="text-muted-foreground p-8 text-center">Loading Correction Centre…</p>;
   }
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="space-y-6 pb-16">
+      {/* ── Role Banner Guidance ───────────────────────────────────── */}
+      {isStudent && activeStudent && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50/70 p-4 text-xs text-amber-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs">
+          <div>
+            <p className="font-bold text-amber-900 uppercase text-[11px]">
+              👤 Student Self-Service: {activeStudent.name} ({activeStudent.student_id})
+            </p>
+            <p className="text-amber-800 mt-0.5">
+              You are viewing your own data correction requests. To scrutinize or approve requests,
+              switch your role above to <strong>Officer</strong> or{" "}
+              <strong>Institution Admin</strong>.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setRole("officer")}
+            className="bg-amber-900 hover:bg-amber-950 text-white shrink-0 text-xs"
+          >
+            Switch to Officer Scrutiny →
+          </Button>
+        </div>
+      )}
+
+      {isOfficer && (
+        <div className="rounded-xl border border-green-300 bg-green-50/70 p-4 text-xs text-green-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs">
+          <div>
+            <p className="font-bold text-green-900 uppercase text-[11px]">
+              📋 Officer Scrutiny Queue
+            </p>
+            <p className="text-green-800 mt-0.5">
+              Examine student evidence documents, add scrutiny notes, or request more info. Once
+              vetted, an Institution Admin can grant final statutory approval.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setRole("institution_admin")}
+            className="bg-green-800 hover:bg-green-900 text-white shrink-0 text-xs"
+          >
+            Switch to Admin Approval →
+          </Button>
+        </div>
+      )}
+
       {/* ── Page Header ────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="font-display text-3xl tracking-tight text-foreground">
-              Correction Centre
+              {isStudent ? "My Correction Requests" : "Correction Centre"}
             </h1>
-            <Badge className="bg-amber-100 text-amber-800">Sprint 2 Demo</Badge>
+            <Badge
+              className={cn(
+                "capitalize text-xs",
+                isStudent
+                  ? "bg-amber-100 text-amber-800"
+                  : isOfficer
+                    ? "bg-green-100 text-green-800"
+                    : "bg-blue-100 text-blue-800",
+              )}
+            >
+              {currentRole.replace(/_/g, " ")} View
+            </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Automated discrepancy review, smart suggestions, SLA monitoring & resolution.
+            {isStudent
+              ? "Submit corrections for your academic records and track officer resolution."
+              : "Automated discrepancy review, smart suggestions, SLA monitoring & resolution."}
           </p>
         </div>
 
@@ -255,7 +326,9 @@ function DemoCorrectionsPage() {
         <div className="rounded-xl border border-border bg-card p-4 shadow-2xs">
           <p className="text-xs font-medium text-muted-foreground">Total Requests</p>
           <p className="font-display text-2xl font-bold text-foreground mt-1">{totalCount}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Across all programmes</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {isStudent ? "Your submissions" : "Across institute"}
+          </p>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-4 shadow-2xs border-l-4 border-l-amber-500">
@@ -273,7 +346,7 @@ function DemoCorrectionsPage() {
         <div className="rounded-xl border border-border bg-card p-4 shadow-2xs border-l-4 border-l-blue-500">
           <p className="text-xs font-medium text-muted-foreground">In Review / Info</p>
           <p className="font-display text-2xl font-bold text-blue-600 mt-1">{inReviewCount}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Under investigation</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Under scrutiny</p>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-4 shadow-2xs border-l-4 border-l-green-500">
@@ -360,7 +433,9 @@ function DemoCorrectionsPage() {
           <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
           <p className="mt-3 font-display text-lg text-foreground">No requests found</p>
           <p className="text-xs text-muted-foreground mt-1">
-            No correction requests match the selected tab and search filter.
+            {isStudent
+              ? "You have no correction requests in this category."
+              : "No correction requests match the selected tab and filter."}
           </p>
         </div>
       ) : (
@@ -457,9 +532,13 @@ function DemoCorrectionsPage() {
                       className="text-xs gap-1.5"
                     >
                       <FileText className="h-3.5 w-3.5" />
-                      {req.status === "pending" || req.status === "in_review"
-                        ? "Review & Action"
-                        : "View Audit"}
+                      {isStudent
+                        ? "View Request Details"
+                        : isOfficer
+                          ? "Scrutinize Evidence"
+                          : req.status === "pending" || req.status === "in_review"
+                            ? "Approve / Reject"
+                            : "View Audit"}
                     </Button>
                   </div>
                 </div>
@@ -469,19 +548,27 @@ function DemoCorrectionsPage() {
         </div>
       )}
 
-      {/* ── Review Dialog ───────────────────────────────────────────── */}
+      {/* ── Review / Details Dialog ─────────────────────────────────── */}
       {selectedRequest && (
         <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <span>Discrepancy Scrutiny & Action</span>
+                <span>
+                  {isStudent
+                    ? "Correction Request Status"
+                    : isOfficer
+                      ? "Officer Scrutiny & Triage"
+                      : "Administrative Approval Decision"}
+                </span>
                 <Badge variant="outline" className="text-xs uppercase">
                   {selectedRequest.status.replace(/_/g, " ")}
                 </Badge>
               </DialogTitle>
               <DialogDescription>
-                Examine student identity evidence and update registry state.
+                {isStudent
+                  ? "Track the verification and review progress for your submission."
+                  : "Examine student identity evidence and take role-authorized action."}
               </DialogDescription>
             </DialogHeader>
 
@@ -553,16 +640,24 @@ function DemoCorrectionsPage() {
                 </div>
               )}
 
-              {/* Reviewer Notes */}
+              {/* Reviewer Notes (editable for Officer / Admin, read-only for Student) */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Reviewer Notes:</label>
-                <Textarea
-                  value={reviewerNotes}
-                  onChange={(e) => setReviewerNotes(e.target.value)}
-                  placeholder="Record rationale for approval, rejection, or scrutiny details…"
-                  rows={3}
-                  className="text-xs"
-                />
+                <label className="text-xs font-semibold text-foreground">
+                  {isStudent ? "Officer Feedback / Reviewer Notes:" : "Reviewer Notes:"}
+                </label>
+                {isStudent ? (
+                  <p className="rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
+                    {selectedRequest.reviewer_notes || "No officer comments entered yet."}
+                  </p>
+                ) : (
+                  <Textarea
+                    value={reviewerNotes}
+                    onChange={(e) => setReviewerNotes(e.target.value)}
+                    placeholder="Record rationale for approval, rejection, or scrutiny details…"
+                    rows={3}
+                    className="text-xs"
+                  />
+                )}
               </div>
             </div>
 
@@ -576,34 +671,52 @@ function DemoCorrectionsPage() {
                 Close
               </Button>
 
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleReviewAction("more_info_required")}
-                  disabled={processing}
-                  className="text-xs"
-                >
-                  Request Info
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleReviewAction("rejected")}
-                  disabled={processing}
-                  className="text-xs"
-                >
-                  Reject
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleReviewAction("approved")}
-                  disabled={processing}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-                >
-                  Approve & Apply
-                </Button>
-              </div>
+              {/* Action buttons differ by role */}
+              {isStudent ? (
+                <span className="text-xs text-muted-foreground self-center italic">
+                  Awaiting institutional officer scrutiny
+                </span>
+              ) : isOfficer ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleReviewAction("more_info_required")}
+                    disabled={processing}
+                    className="text-xs"
+                  >
+                    Request Info
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleReviewAction("in_review")}
+                    disabled={processing}
+                    className="bg-green-700 hover:bg-green-800 text-white text-xs"
+                  >
+                    Mark Verified & In Review
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleReviewAction("rejected")}
+                    disabled={processing}
+                    className="text-xs"
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleReviewAction("approved")}
+                    disabled={processing}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                  >
+                    Approve & Apply to Registry
+                  </Button>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -615,27 +728,40 @@ function DemoCorrectionsPage() {
           <DialogHeader>
             <DialogTitle>Submit Data Correction Request</DialogTitle>
             <DialogDescription>
-              Create a traceable correction request for an enrolled student.
+              {isStudent
+                ? "Request a formal correction for your student record."
+                : "Create a traceable correction request for an enrolled student."}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateNewCorrection} className="space-y-4 py-2 text-xs">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-foreground">Select Student:</label>
-              <select
-                value={newStudentId}
-                onChange={(e) => setNewStudentId(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs shadow-2xs"
-                required
-              >
-                <option value="">-- Choose enrolled student --</option>
-                {students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.student_id}) - {s.programme_code}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* If Student, display fixed active student */}
+            {isStudent && activeStudent ? (
+              <div className="rounded-lg bg-muted/30 p-2.5 border border-border">
+                <p className="text-[11px] text-muted-foreground">Requesting for Student:</p>
+                <p className="font-semibold text-foreground">
+                  {activeStudent.name} (Roll: {activeStudent.student_id})
+                </p>
+                <p className="text-[11px] text-muted-foreground">{activeStudent.programme_code}</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <label className="font-semibold text-foreground">Select Student:</label>
+                <select
+                  value={newStudentId}
+                  onChange={(e) => setNewStudentId(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs shadow-2xs"
+                  required
+                >
+                  <option value="">-- Choose enrolled student --</option>
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.student_id}) - {s.programme_code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label className="font-semibold text-foreground">Field to Correct:</label>

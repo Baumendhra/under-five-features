@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { getDemoStudents } from "@/lib/demo.functions";
+import { useDemoRole } from "@/lib/demo-role-store";
 import {
   generateCandidatePairs,
   clusterDuplicateCandidates,
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/demo/duplicates")({
 type ResolutionAction = "merge" | "keep_both" | "scrutiny_required" | "";
 
 function DemoDuplicatesPage() {
+  const [currentRole, setRole] = useDemoRole();
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["demo-students"],
     queryFn: () => getDemoStudents(),
@@ -85,6 +87,35 @@ function DemoDuplicatesPage() {
     if (candidatePairs.length === 0) return [];
     return clusterDuplicateCandidates(candidatePairs);
   }, [candidatePairs]);
+
+  if (currentRole === "student") {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-8 text-center space-y-4 my-8">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800 text-2xl">
+          🛡️
+        </div>
+        <div className="space-y-1">
+          <h2 className="font-display text-xl font-bold text-amber-950">
+            Role Boundary: Duplicate Identity Resolution
+          </h2>
+          <p className="max-w-md mx-auto text-xs text-amber-900 leading-relaxed">
+            As an enrolled <strong>Student</strong>, your access is focused on your personal
+            academic profile, APAAR verification status, and data correction requests. Multi-student
+            candidate identity resolution and cluster merging are reserved for Officers and
+            Institution Admins.
+          </p>
+        </div>
+        <div className="flex justify-center gap-3 pt-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/demo/dashboard">← Return to My Student Portal</Link>
+          </Button>
+          <Button size="sm" onClick={() => setRole("officer")}>
+            Switch to Officer Scrutiny →
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   function handleResolve(pairId: string) {
     const r = resolutions[pairId];

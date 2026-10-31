@@ -1,8 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getDemoStudents, insertDemoStudents } from "@/lib/demo.functions";
+import { useDemoRole } from "@/lib/demo-role-store";
 import {
   parseStudentsCsv,
   reviewStudents,
@@ -35,6 +36,8 @@ const IMPORTABLE_STATUSES = new Set(["valid", "missing_apaar", "invalid_apaar"])
 function DemoImportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [currentRole, setRole] = useDemoRole();
+
   const { data: existing = [] } = useQuery({
     queryKey: ["demo-students"],
     queryFn: () => getDemoStudents(),
@@ -44,6 +47,46 @@ function DemoImportPage() {
   const [reviewed, setReviewed] = useState<ReviewedStudent[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [importing, setImporting] = useState(false);
+
+  const counts = useMemo(() => {
+    const rows = reviewed ?? [];
+    return {
+      total: rows.length,
+      ready: rows.filter((r) => r.status === "valid").length,
+      flagged: rows.filter((r) => r.status === "missing_apaar" || r.status === "invalid_apaar")
+        .length,
+      duplicates: rows.filter((r) => r.status.startsWith("duplicate")).length,
+      skipped: rows.filter((r) => r.status === "missing_name").length,
+    };
+  }, [reviewed]);
+
+  if (currentRole === "student") {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-8 text-center space-y-4 my-8">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800 text-2xl">
+          🛡️
+        </div>
+        <div className="space-y-1">
+          <h2 className="font-display text-xl font-bold text-amber-950">
+            Role Boundary: Student Batch Import
+          </h2>
+          <p className="max-w-md mx-auto text-xs text-amber-900 leading-relaxed">
+            As an enrolled <strong>Student</strong>, your access is focused on your personal
+            academic profile, APAAR verification status, and data correction requests. Bulk CSV
+            student ingestion is reserved for Institution Admins.
+          </p>
+        </div>
+        <div className="flex justify-center gap-3 pt-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/demo/dashboard">← Return to My Student Portal</Link>
+          </Button>
+          <Button size="sm" onClick={() => setRole("institution_admin")}>
+            Switch to Institution Admin →
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   async function handleFile(file: File) {
     const text = await file.text();
@@ -69,18 +112,6 @@ function DemoImportPage() {
       return next;
     });
   }
-
-  const counts = useMemo(() => {
-    const rows = reviewed ?? [];
-    return {
-      total: rows.length,
-      ready: rows.filter((r) => r.status === "valid").length,
-      flagged: rows.filter((r) => r.status === "missing_apaar" || r.status === "invalid_apaar")
-        .length,
-      duplicates: rows.filter((r) => r.status.startsWith("duplicate")).length,
-      skipped: rows.filter((r) => r.status === "missing_name").length,
-    };
-  }, [reviewed]);
 
   async function handleImport() {
     if (!reviewed) return;

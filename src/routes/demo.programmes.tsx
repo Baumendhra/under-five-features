@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -7,6 +7,7 @@ import {
   getDemoStudents,
   type DemoProgramme,
 } from "@/lib/demo.functions";
+import { useDemoRole } from "@/lib/demo-role-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +65,7 @@ export const Route = createFileRoute("/demo/programmes")({
 
 function DemoProgrammesPage() {
   const queryClient = useQueryClient();
+  const [currentRole, setRole] = useDemoRole();
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [code, setCode] = useState("");
@@ -80,6 +82,34 @@ function DemoProgrammesPage() {
     queryKey: ["demo-students"],
     queryFn: () => getDemoStudents(),
   });
+
+  if (currentRole === "student") {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-8 text-center space-y-4 my-8">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800 text-2xl">
+          🛡️
+        </div>
+        <div className="space-y-1">
+          <h2 className="font-display text-xl font-bold text-amber-950">
+            Role Boundary: Academic Programmes & Capacity
+          </h2>
+          <p className="max-w-md mx-auto text-xs text-amber-900 leading-relaxed">
+            As an enrolled <strong>Student</strong>, your access is focused on your personal
+            academic profile, APAAR verification status, and data correction requests. Programme
+            capacity limits and 2025 predictive intake forecasts are managed by Institution Admins.
+          </p>
+        </div>
+        <div className="flex justify-center gap-3 pt-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/demo/dashboard">← Return to My Student Portal</Link>
+          </Button>
+          <Button size="sm" onClick={() => setRole("institution_admin")}>
+            Switch to Institution Admin →
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Calculate real student counts dynamically per programme
   const progMetrics = programmes.map((p) => {
