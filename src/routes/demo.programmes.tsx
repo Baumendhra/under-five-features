@@ -425,7 +425,7 @@ function DemoProgrammesPage() {
                             : "border-green-400 bg-green-100 text-green-800",
                     )}
                   >
-                    {p.status.replace(/_/g, " ")}
+                    {(p.status || "").replace(/_/g, " ")}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">

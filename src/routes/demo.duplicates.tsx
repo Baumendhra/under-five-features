@@ -253,7 +253,7 @@ function DemoDuplicatesPage() {
                               : "bg-amber-100 text-amber-800 border-amber-300",
                           )}
                         >
-                          {match.confidence.replace(/_/g, " ")} ({match.percentage}%)
+                          {(match.confidence || "").replace(/_/g, " ")} ({match.percentage}%)
                         </Badge>
 
                         {match.isExactCollision && (

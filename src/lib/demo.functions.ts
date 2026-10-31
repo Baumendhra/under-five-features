@@ -792,6 +792,8 @@ export const submitDemoCorrection = createServerFn({ method: "POST" })
       current_value: string;
       requested_value: string;
       reason: string;
+      supporting_doc?: string;
+      suggested_fix?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -809,6 +811,8 @@ export const submitDemoCorrection = createServerFn({ method: "POST" })
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       sla_deadline: new Date(Date.now() + 48 * 3600000).toISOString(),
+      supporting_doc: data.supporting_doc || "student_uploaded_evidence.pdf",
+      suggested_fix: data.suggested_fix,
     };
     DEMO_CORRECTIONS = [newCor, ...DEMO_CORRECTIONS];
     persistState();

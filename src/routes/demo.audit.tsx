@@ -162,7 +162,7 @@ function DemoAudit() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm capitalize">
-                  {log.entity_type.replace(/_/g, " ")}
+                  {(log.entity_type || "").replace(/_/g, " ")}
                 </TableCell>
                 <TableCell className="max-w-32 truncate font-mono text-xs text-muted-foreground">
                   {log.entity_id ? log.entity_id.slice(0, 8) + "…" : "—"}

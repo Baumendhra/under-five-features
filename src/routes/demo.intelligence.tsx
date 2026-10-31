@@ -233,16 +233,30 @@ function DemoIntelligencePage() {
     );
   }
 
-  const {
-    registryHealth,
-    corrections,
-    identity,
-    apaar,
-    intake,
-    operationalPriorities,
-    overallHealthIndex,
-    overallHealthStatus,
-  } = data;
+  const { registryHealth, corrections, identity, apaar, intake, operationalPriorities } = data;
+
+  const overallHealthIndex =
+    data.overallHealthIndex ??
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(
+          (registryHealth?.averageQualityScore ?? 80) * 0.35 +
+            (apaar?.coveragePercentage ?? 70) * 0.25 +
+            85 * 0.25 +
+            Math.max(0, 100 - (corrections?.pendingCount ?? 0) * 5) * 0.15,
+        ),
+      ),
+    );
+
+  const overallHealthStatus: "HEALTHY" | "ATTENTION_REQUIRED" | "CRITICAL" =
+    data.overallHealthStatus ??
+    (overallHealthIndex >= 80
+      ? "HEALTHY"
+      : overallHealthIndex >= 60
+        ? "ATTENTION_REQUIRED"
+        : "CRITICAL");
 
   return (
     <div className="space-y-8 pb-16">
@@ -321,7 +335,7 @@ function DemoIntelligencePage() {
                   )}
                 />
                 <span className="font-display text-lg font-bold uppercase tracking-tight">
-                  {overallHealthStatus.replace("_", " ")}
+                  {(overallHealthStatus || "HEALTHY").replace(/_/g, " ")}
                 </span>
               </div>
             </div>
@@ -550,7 +564,7 @@ function DemoIntelligencePage() {
                   </Badge>
                   <span className="font-semibold text-foreground text-sm">{item.title}</span>
                   <Badge variant="secondary" className="text-[10px]">
-                    {item.responsibleRole.replace("_", " ")}
+                    {(item.responsibleRole || "admin").replace(/_/g, " ")}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">{item.rationale}</p>
@@ -567,7 +581,7 @@ function DemoIntelligencePage() {
                   variant={item.category === "CRITICAL" ? "destructive" : "default"}
                   className="gap-1.5 text-xs"
                 >
-                  <Link to={item.routeLink.replace("/_", "/demo/")}>
+                  <Link to={(item.routeLink || "/demo/dashboard").replace("/_", "/demo/")}>
                     Execute Action <ChevronRight className="h-3.5 w-3.5" />
                   </Link>
                 </Button>

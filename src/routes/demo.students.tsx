@@ -9,7 +9,7 @@ import {
   singleVerifyDemoStudent,
 } from "@/lib/demo.functions";
 import { useDemoRole } from "@/lib/demo-role-store";
-import { evaluateStudentRecord, type StudentQualityEvaluation } from "@/lib/data-quality";
+import { evaluateStudentRecord, type StudentQualityReport } from "@/lib/data-quality";
 import { validateLocalApaar, type LocalApaarValidationResult } from "@/lib/apaar-orchestrator";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Button } from "@/components/ui/button";
@@ -95,7 +95,7 @@ function QualityBadge({
   quality,
   onClick,
 }: {
-  quality: StudentQualityEvaluation;
+  quality: StudentQualityReport;
   onClick: () => void;
 }) {
   const color =
@@ -117,7 +117,7 @@ function QualityBadge({
       title="Click to view explainable data quality breakdown"
     >
       <span>{quality.overallScore}%</span>
-      <span className="capitalize text-[10px] font-normal opacity-80">{quality.tier}</span>
+      <span className="capitalize text-[10px] font-normal opacity-80">{quality.band}</span>
     </button>
   );
 }
@@ -145,7 +145,7 @@ function DemoStudents() {
   // Quality Dialog State
   const [selectedQualityStudent, setSelectedQualityStudent] = useState<{
     student: StudentRecord;
-    quality: StudentQualityEvaluation;
+    quality: StudentQualityReport;
   } | null>(null);
 
   // Batch Verify Modal State
@@ -496,7 +496,7 @@ function DemoStudents() {
               <DialogTitle className="flex items-center gap-2">
                 <span>Data Quality Analysis</span>
                 <Badge variant="outline" className="text-xs uppercase">
-                  {selectedQualityStudent.quality.tier}
+                  {selectedQualityStudent.quality.band}
                 </Badge>
               </DialogTitle>
               <DialogDescription>
@@ -518,17 +518,19 @@ function DemoStudents() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Priority Rank</p>
+                  <p className="text-xs text-muted-foreground">Priority Level</p>
                   <Badge
                     variant="outline"
                     className={cn(
                       "uppercase text-[10px] font-bold mt-1",
-                      selectedQualityStudent.quality.prioritization === "urgent"
+                      selectedQualityStudent.quality.priorityLevel === "critical"
                         ? "bg-red-100 text-red-800 border-red-300"
-                        : "bg-blue-100 text-blue-800 border-blue-300",
+                        : selectedQualityStudent.quality.priorityLevel === "high"
+                          ? "bg-amber-100 text-amber-800 border-amber-300"
+                          : "bg-blue-100 text-blue-800 border-blue-300",
                     )}
                   >
-                    {selectedQualityStudent.quality.prioritization}
+                    {selectedQualityStudent.quality.priorityLevel}
                   </Badge>
                 </div>
               </div>
@@ -538,19 +540,25 @@ function DemoStudents() {
                 <div className="rounded-lg border border-border p-2">
                   <p className="text-muted-foreground text-[10px]">Completeness</p>
                   <p className="font-bold text-foreground mt-0.5">
-                    {selectedQualityStudent.quality.dimensions.completeness}%
+                    {selectedQualityStudent.quality.completenessScore ??
+                      selectedQualityStudent.quality.dimensionScores?.identity ??
+                      0}
+                    %
                   </p>
                 </div>
                 <div className="rounded-lg border border-border p-2">
                   <p className="text-muted-foreground text-[10px]">Validity</p>
                   <p className="font-bold text-foreground mt-0.5">
-                    {selectedQualityStudent.quality.dimensions.validity}%
+                    {selectedQualityStudent.quality.validityScore ??
+                      selectedQualityStudent.quality.dimensionScores?.apaar ??
+                      0}
+                    %
                   </p>
                 </div>
                 <div className="rounded-lg border border-border p-2">
                   <p className="text-muted-foreground text-[10px]">Verification</p>
                   <p className="font-bold text-foreground mt-0.5">
-                    {selectedQualityStudent.quality.dimensions.verification}%
+                    {selectedQualityStudent.quality.verificationScore ?? 0}%
                   </p>
                 </div>
               </div>

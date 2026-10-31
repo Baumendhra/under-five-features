@@ -144,6 +144,8 @@ export interface InstitutionalIntelligenceMetrics {
   apaar: ApaarVerificationMetrics;
   intake: PredictiveIntakeMetrics;
   operationalPriorities: OperationalPriorityItem[];
+  overallHealthIndex: number;
+  overallHealthStatus: "HEALTHY" | "ATTENTION_REQUIRED" | "CRITICAL";
 }
 
 // ── Privacy-Filtered Context for AI Providers ──────────────────────────────
@@ -569,6 +571,30 @@ export function aggregateInstitutionalIntelligence(params: {
     intake: intakeMetrics,
   });
 
+  // 7. Calculate composite institutional health index & status
+  const overallHealthIndex = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        registryHealth.averageQualityScore * 0.35 +
+          apaarMetrics.coveragePercentage * 0.25 +
+          (intakeMetrics.overallCapacityUtilizationPct <= 100
+            ? 100
+            : Math.max(0, 100 - (intakeMetrics.overallCapacityUtilizationPct - 100) * 2)) *
+            0.25 +
+          Math.max(0, 100 - correctionsMetrics.pendingCount * 5) * 0.15,
+      ),
+    ),
+  );
+
+  const overallHealthStatus: "HEALTHY" | "ATTENTION_REQUIRED" | "CRITICAL" =
+    overallHealthIndex >= 80
+      ? "HEALTHY"
+      : overallHealthIndex >= 60
+        ? "ATTENTION_REQUIRED"
+        : "CRITICAL";
+
   return {
     institutionId,
     institutionName,
@@ -579,6 +605,8 @@ export function aggregateInstitutionalIntelligence(params: {
     apaar: apaarMetrics,
     intake: intakeMetrics,
     operationalPriorities,
+    overallHealthIndex,
+    overallHealthStatus,
   };
 }
 
